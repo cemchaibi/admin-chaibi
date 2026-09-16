@@ -177,12 +177,19 @@
             <div class="admin-field"><label>التاريخ</label><input type="text" id="newsDate" placeholder="مثال: 28 أوت 2026"></div>
           </div>
           <div class="admin-field"><label>التصنيف</label><input type="text" id="newsCat" placeholder="مثال: نشاط ثقافي"></div>
-          <div class="admin-field"><label>نص الخبر</label><textarea id="newsExcerpt" placeholder="تفاصيل مختصرة عن الخبر..."></textarea></div>
+          <div class="admin-field"><label>نص مختصر (يظهر في قائمة الأخبار)</label><textarea id="newsExcerpt" placeholder="تفاصيل مختصرة عن الخبر..."></textarea></div>
+          <div class="admin-field"><label>المحتوى الكامل (يظهر في صفحة الخبر — اختياري، وإلا يُستعمل النص المختصر)</label><textarea id="newsContent" style="min-height:130px;" placeholder="اكتب هنا التفاصيل الكاملة للخبر..."></textarea></div>
           <div class="admin-field">
-            <label>صورة الخبر (اختياري)</label>
+            <label>صورة الخبر الرئيسية (اختياري)</label>
             <div class="img-upload-box" id="newsImgBox">اضغط هنا لاختيار صورة، أو اتركها فارغة لاستخدام أيقونة افتراضية</div>
             <input type="file" id="newsImgInput" accept="image/*" style="display:none;">
             <img class="img-preview" id="newsImgPreview">
+          </div>
+          <div class="admin-field">
+            <label>صور إضافية (معرض الصور داخل صفحة الخبر — اختياري)</label>
+            <div class="img-upload-box" id="newsGalleryBox">اضغط هنا لإضافة صورة إلى المعرض (يمكن تكرار الإضافة)</div>
+            <input type="file" id="newsGalleryInput" accept="image/*" style="display:none;">
+            <div id="newsGalleryPreview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;"></div>
           </div>
           <div style="display:flex; gap:10px;">
             <button class="btn gold" id="newsSaveBtn">حفظ الخبر</button>
@@ -462,6 +469,7 @@
 
   // ================= إدارة الأخبار =================
   let pendingNewsImage = null;
+  let pendingGallery = [];
   document.getElementById('newsImgBox').addEventListener('click', ()=> document.getElementById('newsImgInput').click());
   document.getElementById('newsImgInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
@@ -471,16 +479,41 @@
     prev.src = pendingNewsImage; prev.style.display = 'block';
   });
 
+  function renderGalleryPreview(){
+    const box = document.getElementById('newsGalleryPreview');
+    box.innerHTML = pendingGallery.map((src, i)=> `
+      <div style="position:relative;">
+        <img src="${src}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">
+        <button type="button" data-remove-gallery="${i}" style="position:absolute; top:-6px; left:-6px; width:20px; height:20px; border-radius:50%; background:var(--red); color:#fff; font-size:.7rem; line-height:1;">×</button>
+      </div>`).join('');
+    box.querySelectorAll('[data-remove-gallery]').forEach(b=> b.addEventListener('click', ()=>{
+      pendingGallery.splice(Number(b.dataset.removeGallery), 1);
+      renderGalleryPreview();
+    }));
+  }
+  document.getElementById('newsGalleryBox').addEventListener('click', ()=> document.getElementById('newsGalleryInput').click());
+  document.getElementById('newsGalleryInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const compressed = await compressImage(file);
+    pendingGallery.push(compressed);
+    renderGalleryPreview();
+    e.target.value = '';
+  });
+
   function resetNewsForm(){
     document.getElementById('newsEditId').value = '';
     document.getElementById('newsTitle').value = '';
     document.getElementById('newsDate').value = '';
     document.getElementById('newsCat').value = '';
     document.getElementById('newsExcerpt').value = '';
+    document.getElementById('newsContent').value = '';
     document.getElementById('newsImgPreview').style.display = 'none';
     document.getElementById('newsFormTitle').textContent = 'إضافة خبر جديد';
     document.getElementById('newsCancelEdit').style.display = 'none';
     pendingNewsImage = null;
+    pendingGallery = [];
+    renderGalleryPreview();
   }
   document.getElementById('newsCancelEdit').addEventListener('click', resetNewsForm);
 
@@ -489,17 +522,20 @@
     const date = document.getElementById('newsDate').value.trim();
     const cat = document.getElementById('newsCat').value.trim() || 'إعلان';
     const excerpt = document.getElementById('newsExcerpt').value.trim();
-    if(!title || !date || !excerpt){ alert('يرجى تعبئة العنوان والتاريخ والنص على الأقل'); return; }
+    const content = document.getElementById('newsContent').value.trim();
+    if(!title || !date || !excerpt){ alert('يرجى تعبئة العنوان والتاريخ والنص المختصر على الأقل'); return; }
     const editId = document.getElementById('newsEditId').value;
 
     if(editId){
       const item = siteNews.find(n=> n.id === editId);
       if(item){
         item.title = title; item.date = date; item.cat = cat; item.excerpt = excerpt;
+        item.content = content || '';
         if(pendingNewsImage) item.image = pendingNewsImage;
+        if(pendingGallery.length) item.gallery = pendingGallery.slice();
       }
     } else {
-      siteNews.unshift({id:genId(), date, title, excerpt, cat, ic:'newspaper', image: pendingNewsImage});
+      siteNews.unshift({id:genId(), date, title, excerpt, content: content || '', cat, ic:'newspaper', image: pendingNewsImage, gallery: pendingGallery.slice()});
     }
     await saveJSON('site-news', siteNews);
     renderAdminNewsList();
@@ -514,7 +550,7 @@
         <div class="admin-list-thumb">${n.image ? `<img src="${n.image}">` : icon(n.ic || 'newspaper', 18)}</div>
         <div class="admin-list-info">
           <div class="t">${escapeHtml(n.title)}</div>
-          <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}</div>
+          <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}${n.gallery && n.gallery.length ? ' · ' + n.gallery.length + ' صور إضافية' : ''}</div>
         </div>
         <div class="admin-list-actions">
           <button class="admin-mini-btn edit" data-edit-news="${n.id}" title="تعديل"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4z"/></svg></button>
@@ -530,11 +566,14 @@
       document.getElementById('newsDate').value = item.date;
       document.getElementById('newsCat').value = item.cat;
       document.getElementById('newsExcerpt').value = item.excerpt;
+      document.getElementById('newsContent').value = item.content || '';
       document.getElementById('newsFormTitle').textContent = 'تعديل الخبر';
       document.getElementById('newsCancelEdit').style.display = 'inline-flex';
       const prev = document.getElementById('newsImgPreview');
       if(item.image){ prev.src = item.image; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
       pendingNewsImage = null;
+      pendingGallery = (item.gallery || []).slice();
+      renderGalleryPreview();
       window.scrollTo({top:0, behavior:'smooth'});
     }));
     wrap.querySelectorAll('[data-del-news]').forEach(b=> b.addEventListener('click', async ()=>{
