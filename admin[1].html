@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>لوحة تحكم متوسطة شعيبي بومدين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#123240;
+    --deep:#0e3b4c;
+    --deep-2:#0a2c3a;
+    --royal:#2f6ea8;
+    --royal-light:#4f8fc7;
+    --gold:#c99a2e;
+    --gold-light:#e6c467;
+    --paper:#faf5ea;
+    --paper-2:#f2e9d8;
+    --red:#a8402f;
+    --white:#ffffff;
+    --line: rgba(201,154,46,.35);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    line-height:1.75;
+  }
+  h1,h2,h3,h4{ font-family:'Almarai', sans-serif; font-weight:800; }
+  a{color:inherit; text-decoration:none;}
+  input, textarea, select, button{ font:inherit; }
+  button{ border:none; cursor:pointer; }
+
+  .btn{
+    background:var(--royal); color:#fff; padding:11px 24px; border-radius:12px; font-size:.88rem; font-family:'Cairo',sans-serif; font-weight:700; transition:.25s;
+    box-shadow:0 4px 14px rgba(47,110,168,.25); display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn:hover{background:var(--deep); transform:translateY(-2px); box-shadow:0 8px 20px rgba(14,59,76,.3);}
+  .btn.gold{background:var(--gold); color:var(--deep-2); box-shadow:0 4px 14px rgba(201,154,46,.3);}
+  .btn.gold:hover{background:var(--gold-light); box-shadow:0 8px 20px rgba(201,154,46,.35);}
+
+  .auth-btn{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:12px; border-radius:11px; font-size:.9rem; font-weight:700; margin-bottom:12px;
+    border:1px solid #e4d9bd; font-family:'Cairo',sans-serif; transition:.2s;
+  }
+  .auth-btn.google{background:#fff; color:var(--ink);}
+  .auth-btn.google:hover{background:#f6f6f6;}
+
+  /* ===== ADMIN PANEL ===== */
+  .admin-login-wrap{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    background:radial-gradient(ellipse at 50% -10%, #164a5e 0%, var(--deep) 55%, var(--deep-2) 100%);
+  }
+  .admin-login-card{
+    background:#fff; border-radius:20px; padding:34px 30px; width:100%; max-width:380px;
+    box-shadow:0 24px 60px rgba(10,30,38,.35); text-align:center;
+  }
+  .admin-login-card h3{color:var(--deep); font-size:1.15rem; margin-bottom:6px;}
+  .admin-login-card p{color:#7c8b91; font-size:.85rem; margin-bottom:22px;}
+  .admin-login-card input{
+    width:100%; border:1px solid #e4d9bd; border-radius:10px; padding:12px 14px; margin-bottom:12px;
+    font-family:'IBM Plex Sans Arabic',sans-serif; font-size:.9rem; outline:none; color:var(--ink); text-align:center;
+  }
+  .admin-login-card input:focus{border-color:var(--royal);}
+  .admin-error{color:var(--red); font-size:.8rem; margin-bottom:10px; display:none;}
+
+  .admin-shell{display:none;}
+  .admin-shell.open{display:block;}
+  .admin-topbar{
+    background:var(--deep); color:#fff; padding:16px 24px; display:flex; align-items:center;
+    justify-content:space-between; position:sticky; top:0; z-index:5; border-bottom:1px solid var(--line);
+  }
+  .admin-topbar .t-left{display:flex; align-items:center; gap:12px; font-family:'Almarai',sans-serif; font-weight:700;}
+  .admin-topbar .exit-link{font-size:.85rem; color:var(--gold-light); font-family:'Cairo',sans-serif; cursor:pointer;}
+
+  .admin-body{max-width:1100px; margin:0 auto; padding:30px 24px 70px;}
+  .admin-tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:26px;}
+  .admin-tab-btn{
+    background:#fff; border:1px solid var(--line); color:var(--deep); padding:10px 18px;
+    border-radius:12px; font-size:.87rem; font-family:'Cairo',sans-serif; transition:.2s; font-weight:600;
+  }
+  .admin-tab-btn.active{background:var(--deep); color:#fff; border-color:var(--deep);}
+  .admin-panel-section{display:none;}
+  .admin-panel-section.active{display:block;}
+
+  .admin-card{
+    background:#fff; border:1px solid #ecdfc2; border-radius:18px; padding:22px;
+    box-shadow:0 6px 20px rgba(20,60,75,.06); margin-bottom:22px;
+  }
+  .admin-card h4{color:var(--deep); font-size:1rem; margin-bottom:16px;}
+  .admin-field{margin-bottom:14px;}
+  .admin-field label{display:block; font-size:.8rem; font-weight:700; color:var(--ink); margin-bottom:6px; font-family:'Cairo',sans-serif;}
+  .admin-field input, .admin-field textarea, .admin-field select{
+    width:100%; border:1px solid #e4d9bd; border-radius:10px; padding:10px 13px;
+    font-family:'IBM Plex Sans Arabic',sans-serif; font-size:.88rem; outline:none; color:var(--ink); background:#fff;
+  }
+  .admin-field textarea{min-height:70px; resize:vertical;}
+  .admin-field input:focus, .admin-field textarea:focus, .admin-field select:focus{border-color:var(--royal);}
+  .admin-grid-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media(max-width:600px){.admin-grid-2{grid-template-columns:1fr;}}
+
+  .img-upload-box{
+    border:1.5px dashed #d9cba0; border-radius:12px; padding:16px; text-align:center; cursor:pointer;
+    color:#8a8375; font-size:.82rem; transition:.2s;
+  }
+  .img-upload-box:hover{border-color:var(--royal); color:var(--royal);}
+  .img-preview{max-width:160px; border-radius:10px; margin:10px auto 0; display:none;}
+
+  .admin-list-item{
+    display:flex; align-items:center; gap:14px; padding:14px; border:1px solid #f0e8d5; border-radius:14px;
+    margin-bottom:10px; background:#fffdf7;
+  }
+  .admin-list-thumb{
+    width:48px; height:48px; border-radius:10px; background:var(--paper-2); flex-shrink:0; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; color:var(--royal);
+  }
+  .admin-list-thumb img{width:100%; height:100%; object-fit:cover;}
+  .admin-list-info{flex:1; min-width:0;}
+  .admin-list-info .t{font-size:.9rem; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .admin-list-info .s{font-size:.78rem; color:#8a959a; font-family:'Cairo',sans-serif;}
+  .admin-list-actions{display:flex; gap:6px; flex-shrink:0;}
+  .admin-mini-btn{
+    width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    background:var(--paper-2); color:var(--ink); transition:.2s;
+  }
+  .admin-mini-btn.danger:hover{background:var(--red); color:#fff;}
+  .admin-mini-btn.edit:hover{background:var(--royal); color:#fff;}
+
+  .admin-level-tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;}
+  .empty-note{color:#a2aeb2; font-size:.85rem; text-align:center; padding:20px 0;}
+</style>
+</head>
+<body>
+
+  <div class="admin-login-wrap" id="adminLoginWrap">
+    <div class="admin-login-card">
+      <h3>لوحة تحكم المتوسطة</h3>
+      <p>هذه الصفحة مخصصة للمدير فقط — سجّل الدخول بحسابك المخوّل للمتابعة</p>
+      <div class="admin-error" id="adminError">هذا الحساب غير مخوّل بالدخول إلى لوحة التحكم</div>
+      <button class="auth-btn google" id="adminGoogleBtn" style="width:100%; margin-bottom:10px;">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.2s2.7-6.2 6-6.2c1.9 0 3.2.8 3.9 1.5l2.7-2.6C16.9 3.1 14.7 2 12 2 6.9 2 2.7 6.2 2.7 11.3S6.9 20.6 12 20.6c6.9 0 9.6-4.8 9.6-7.3 0-.5-.05-.9-.13-1.3H12z"/></svg>
+        دخول المدير عبر Google
+      </button>
+      <div style="font-size:.8rem; color:#7c8b91; margin:8px 0;">أو بالبريد الإلكتروني وكلمة المرور:</div>
+      <input type="email" id="adminEmailInput" placeholder="البريد الإلكتروني" style="margin-bottom:8px;">
+      <input type="password" id="adminPassInput" placeholder="كلمة المرور">
+      <button class="btn gold" id="adminLoginBtn" style="width:100%;">دخول</button>
+    </div>
+  </div>
+
+  <div class="admin-shell" id="adminShell">
+    <div class="admin-topbar">
+      <div class="t-left">لوحة تحكم متوسطة شعيبي بومدين</div>
+      <span class="exit-link" id="adminLogoutBtn">تسجيل الخروج</span>
+    </div>
+    <div class="admin-body">
+      <div class="admin-tabs" id="adminTabs">
+        <button class="admin-tab-btn active" data-tab="news">إدارة الأخبار</button>
+        <button class="admin-tab-btn" data-tab="events">إدارة المناسبات</button>
+        <button class="admin-tab-btn" data-tab="exams">الفروض والاختبارات</button>
+        <button class="admin-tab-btn" data-tab="qa">فضاء الأسئلة</button>
+        <button class="admin-tab-btn" data-tab="users">المستخدمون والإحصائيات</button>
+        <button class="admin-tab-btn" data-tab="parentmsgs">رسائل الأولياء</button>
+      </div>
+
+      <!-- NEWS TAB -->
+      <div class="admin-panel-section active" id="tabNews">
+        <div class="admin-card">
+          <h4 id="newsFormTitle">إضافة خبر جديد</h4>
+          <input type="hidden" id="newsEditId">
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>عنوان الخبر</label><input type="text" id="newsTitle" placeholder="مثال: تكريم التلاميذ المتفوقين"></div>
+            <div class="admin-field"><label>التاريخ</label><input type="text" id="newsDate" placeholder="مثال: 28 أوت 2026"></div>
+          </div>
+          <div class="admin-field"><label>التصنيف</label><input type="text" id="newsCat" placeholder="مثال: نشاط ثقافي"></div>
+          <div class="admin-field"><label>نص الخبر</label><textarea id="newsExcerpt" placeholder="تفاصيل مختصرة عن الخبر..."></textarea></div>
+          <div class="admin-field">
+            <label>صورة الخبر (اختياري)</label>
+            <div class="img-upload-box" id="newsImgBox">اضغط هنا لاختيار صورة، أو اتركها فارغة لاستخدام أيقونة افتراضية</div>
+            <input type="file" id="newsImgInput" accept="image/*" style="display:none;">
+            <img class="img-preview" id="newsImgPreview">
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn gold" id="newsSaveBtn">حفظ الخبر</button>
+            <button class="btn" id="newsCancelEdit" style="display:none; background:#c7ceD1;">إلغاء التعديل</button>
+          </div>
+        </div>
+        <div id="newsAdminList"></div>
+      </div>
+
+      <!-- EVENTS TAB -->
+      <div class="admin-panel-section" id="tabEvents">
+        <div class="admin-card">
+          <h4 id="eventFormTitle">إضافة مناسبة جديدة</h4>
+          <input type="hidden" id="eventEditId">
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>عنوان المناسبة</label><input type="text" id="eventTitle" placeholder="مثال: احتفالية عيد العلم"></div>
+            <div class="admin-field"><label>التاريخ</label><input type="text" id="eventDate" placeholder="مثال: 16 أفريل 2027"></div>
+          </div>
+          <div class="admin-field"><label>وصف مختصر</label><textarea id="eventDesc" placeholder="تفاصيل عن المناسبة..."></textarea></div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn gold" id="eventSaveBtn">حفظ المناسبة</button>
+            <button class="btn" id="eventCancelEdit" style="display:none; background:#c7ceD1;">إلغاء التعديل</button>
+          </div>
+        </div>
+        <div id="eventsAdminList"></div>
+      </div>
+
+      <!-- EXAMS TAB -->
+      <div class="admin-panel-section" id="tabExams">
+        <div class="admin-level-tabs" id="adminLevelTabs"></div>
+        <div class="admin-card">
+          <h4>إضافة فرض / اختبار</h4>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>المادة</label><input type="text" id="examSubj" placeholder="مثال: رياضيات"></div>
+            <div class="admin-field">
+              <label>النوع</label>
+              <select id="examType"><option value="test">اختبار</option><option value="hw">واجب منزلي</option></select>
+            </div>
+          </div>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>التاريخ</label><input type="text" id="examDate" placeholder="مثال: 30 سبتمبر 2026"></div>
+            <div class="admin-field"><label>التوقيت</label><input type="text" id="examTime" placeholder="مثال: 09:00 — 10:00"></div>
+          </div>
+          <button class="btn gold" id="examSaveBtn">إضافة إلى الجدول</button>
+        </div>
+        <div id="examAdminList"></div>
+      </div>
+
+      <!-- QA TAB -->
+      <div class="admin-panel-section" id="tabQa">
+        <div id="qaAdminList"></div>
+      </div>
+
+      <!-- USERS & STATS TAB -->
+      <div class="admin-panel-section" id="tabUsers">
+        <div class="admin-card" id="userStatsCards">
+          <h4>نظرة عامة</h4>
+          <div id="userStatsSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+        </div>
+        <div class="admin-card">
+          <h4>قائمة المسجلين</h4>
+          <div id="usersAdminList">جاري التحميل...</div>
+        </div>
+      </div>
+
+      <!-- PARENT MESSAGES TAB -->
+      <div class="admin-panel-section" id="tabParentmsgs">
+        <div id="parentThreadsAdminList">جاري التحميل...</div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDZ4hr_MISEoJs67DrPLYxqO0LfsSYPtXY",
+    authDomain: "chaibi-1c3aa.firebaseapp.com",
+    projectId: "chaibi-1c3aa",
+    storageBucket: "chaibi-1c3aa.firebasestorage.app",
+    messagingSenderId: "420312727383",
+    appId: "1:420312727383:web:68e84368b932e50facc812",
+    measurementId: "G-B21K02ZS8Y"
+  };
+  // بريد/بريدات المدير — يجب أن يطابق نفس القائمة الموجودة في index.html وفي firestore.rules
+  const ADMIN_EMAILS = ["cemchaibi@gmail.com"];
+
+  let db = null, auth = null;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+  }catch(e){ console.error('Firebase init failed', e); }
+
+  function isAdminUser(user){
+    return !!(user && user.email && ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(user.email.toLowerCase()));
+  }
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function friendlyAuthError(code){
+    const map = {
+      'auth/wrong-password':'كلمة المرور غير صحيحة.',
+      'auth/user-not-found':'لا يوجد حساب بهذا البريد.',
+      'auth/invalid-email':'صيغة البريد الإلكتروني غير صحيحة.',
+      'auth/popup-closed-by-user':'تم إغلاق نافذة تسجيل الدخول قبل الإتمام.',
+      'auth/network-request-failed':'تعذر الاتصال بالشبكة.',
+      'auth/invalid-credential':'البريد أو كلمة المرور غير صحيحة.',
+      'auth/too-many-requests':'محاولات كثيرة متتالية، انتظر قليلاً ثم أعد المحاولة.'
+    };
+    return map[code] || 'حدث خطأ أثناء تسجيل الدخول، حاول مجدداً.';
+  }
+
+  // ================= أيقونات =================
+  const ICON_PATHS = {
+    school: '<path d="M4 21V8.5l8-4.2 8 4.2V21"/><path d="M9 21v-6.5h6V21"/><path d="M9 11h.01M15 11h.01"/>',
+    book: '<path d="M4 5.2c2.2-1 5.2-1 8 1 2.8-2 5.8-2 8-1v13.6c-2.2-1-5.2-1-8 1-2.8-2-5.8-2-8-1V5.2z"/><path d="M12 6.2v13.6"/>',
+    trophy: '<path d="M8 4h8v4.2a4 4 0 0 1-8 0V4z"/><path d="M6 5H4.5A2 2 0 0 0 6 9"/><path d="M18 5h1.5A2 2 0 0 1 18 9"/><path d="M12 12.2V16"/><path d="M9 20h6"/><path d="M10 16h4v4h-4z"/>',
+    flask: '<path d="M9.5 3h5"/><path d="M10.2 3v6.3l-5 8.7a1.8 1.8 0 0 0 1.6 2.7h10.4a1.8 1.8 0 0 0 1.6-2.7l-5-8.7V3"/><path d="M7.8 15h8.4"/>',
+    palette: '<path d="M12 3.2a8.8 8.8 0 1 0 0 17.6c1.1 0 1.9-.6 1.9-1.8 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.2 0-.9.7-1.6 1.6-1.6h1.9a3.9 3.9 0 0 0 3.9-3.9c0-4.3-3.7-7.8-8.3-7.8z"/><circle cx="7.6" cy="12" r="1"/><circle cx="9.4" cy="8.2" r="1"/><circle cx="14.4" cy="7.6" r="1"/><circle cx="16.6" cy="11" r="1"/>',
+    clipboard: '<rect x="5.5" y="4" width="13" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 12.3l2 2 4-4.3"/>',
+    backpack: '<path d="M9 3.2h6a1 1 0 0 1 1 1v1.6h1a2 2 0 0 1 2 2V18a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V7.8a2 2 0 0 1 2-2h1V4.2a1 1 0 0 1 1-1z"/><path d="M9 12h6"/><path d="M9 3.2v3.6h6V3.2"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.4 3.8 5.6 3.8 9s-1.3 6.6-3.8 9c-2.5-2.4-3.8-5.6-3.8-9S9.5 5.4 12 3z"/>',
+    flag: '<path d="M5.5 3v18"/><path d="M5.5 4.2h11l-2 3.8 2 3.8h-11"/>',
+    flower: '<circle cx="12" cy="12" r="2.2"/><path d="M12 3.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"/><path d="M12 15.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"/><path d="M3.2 12a2.8 2.8 0 1 1 5.6 0 2.8 2.8 0 0 1-5.6 0z"/><path d="M15.2 12a2.8 2.8 0 1 1 5.6 0 2.8 2.8 0 0 1-5.6 0z"/>',
+    cap: '<path d="M12 3.2 2.5 8l9.5 4.8L21.5 8 12 3.2z"/><path d="M6.2 10.4V16c0 1.6 2.8 3 5.8 3s5.8-1.4 5.8-3v-5.6"/><path d="M21.5 8v6"/>',
+    newspaper: '<rect x="3" y="5.2" width="13.2" height="14.6" rx="1.6"/><path d="M16.2 8h4.3v8.6a2 2 0 0 1-2 2h-2.3"/><path d="M6 9.4h7.2M6 12.2h7.2M6 15h4.8"/>',
+    calendarStar: '<rect x="3" y="5" width="18" height="16" rx="2.2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M12 13.2l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3z"/>',
+    message: '<path d="M21 11.6a8.5 8.5 0 0 1-9 8.5 8.7 8.7 0 0 1-3.8-.9L3 20.2l1.2-4.4A8.5 8.5 0 1 1 21 11.6z"/>',
+  };
+  function icon(name, size){
+    size = size || 20;
+    return `<span class="icon-badge"><svg viewBox="0 0 24 24" width="${size}" height="${size}">${ICON_PATHS[name] || ''}</svg></span>`;
+  }
+
+  // ================= بيانات افتراضية (تُستخدم فقط إن كانت القاعدة فارغة) =================
+  const DEFAULT_NEWS = [];
+  const DEFAULT_EVENTS = [];
+  const DEFAULT_LEVELS = {
+    "الأولى متوسط":[], "الثانية متوسط":[], "الثالثة متوسط":[], "الرابعة متوسط":[]
+  };
+  const DEFAULT_QUESTIONS = [];
+
+  let siteNews = [], siteEvents = [], siteLevels = {}, siteQuestions = [];
+
+  function genId(){ return 'id' + Date.now() + Math.floor(Math.random()*1000); }
+  async function loadJSON(key, fallback){
+    if(!db){ return JSON.parse(JSON.stringify(fallback)); }
+    try{
+      const doc = await db.collection('siteData').doc(key).get();
+      if(doc.exists && doc.data().items !== undefined) return doc.data().items;
+    }catch(e){ console.error('Firestore load failed for', key, e); }
+    return JSON.parse(JSON.stringify(fallback));
+  }
+  async function saveJSON(key, data){
+    if(!db){ alert('تعذر الاتصال بقاعدة البيانات'); return false; }
+    try{ await db.collection('siteData').doc(key).set({items:data}); return true; }
+    catch(e){ console.error('Firestore save failed for', key, e); alert('تعذر الحفظ — تحقق من اتصالك بالإنترنت أو من صلاحيات Firestore Rules'); return false; }
+  }
+
+  async function initAdminData(){
+    siteNews = await loadJSON('site-news', DEFAULT_NEWS);
+    siteEvents = await loadJSON('site-events', DEFAULT_EVENTS);
+    siteLevels = await loadJSON('site-levels', DEFAULT_LEVELS);
+    siteQuestions = await loadJSON('site-questions', DEFAULT_QUESTIONS);
+  }
+
+  // ================= تسجيل دخول المدير =================
+  const adminLoginWrap = document.getElementById('adminLoginWrap');
+  const adminShell = document.getElementById('adminShell');
+  const adminErrorBox = document.getElementById('adminError');
+
+  function showAdminError(msg){
+    adminErrorBox.textContent = msg;
+    adminErrorBox.style.display = 'block';
+  }
+
+  async function showAdminShell(){
+    adminLoginWrap.style.display = 'none';
+    adminShell.classList.add('open');
+    await initAdminData();
+    renderAdminNewsList();
+    renderAdminEventsList();
+    renderAdminLevelTabs();
+    renderAdminQAList();
+    renderAdminUsersAndStats();
+    renderAdminParentMessages();
+  }
+
+  if(auth){
+    auth.onAuthStateChanged((user)=>{
+      if(user && isAdminUser(user)){
+        showAdminShell();
+      } else if(user && !isAdminUser(user)){
+        showAdminError('هذا الحساب (' + user.email + ') غير مخوّل بالدخول إلى لوحة التحكم.');
+      }
+    });
+  }
+
+  document.getElementById('adminGoogleBtn').addEventListener('click', async ()=>{
+    if(!auth){ showAdminError('تعذر الاتصال بخدمة تسجيل الدخول.'); return; }
+    try{
+      const result = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+      if(!isAdminUser(result.user)){
+        showAdminError('هذا الحساب (' + result.user.email + ') غير مخوّل بالدخول إلى لوحة التحكم.');
+        await auth.signOut();
+        return;
+      }
+      showAdminShell();
+    }catch(e){
+      console.error(e);
+      showAdminError(friendlyAuthError(e.code));
+    }
+  });
+
+  document.getElementById('adminLoginBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('adminEmailInput').value.trim();
+    const pass = document.getElementById('adminPassInput').value;
+    if(!email || !pass){ showAdminError('أدخل البريد الإلكتروني وكلمة المرور.'); return; }
+    if(!auth){ showAdminError('تعذر الاتصال بخدمة تسجيل الدخول.'); return; }
+    try{
+      const cred = await auth.signInWithEmailAndPassword(email, pass);
+      if(!isAdminUser(cred.user)){
+        showAdminError('هذا الحساب غير مخوّل بالدخول إلى لوحة التحكم.');
+        await auth.signOut();
+        return;
+      }
+      showAdminShell();
+    }catch(e){
+      console.error(e);
+      showAdminError(friendlyAuthError(e.code));
+    }
+  });
+  document.getElementById('adminPassInput').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('adminLoginBtn').click();
+  });
+  document.getElementById('adminLogoutBtn').addEventListener('click', async ()=>{
+    if(auth) await auth.signOut();
+    location.reload();
+  });
+
+  // ---- تبديل التبويبات ----
+  document.querySelectorAll('#adminTabs .admin-tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#adminTabs .admin-tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.admin-panel-section').forEach(s=>s.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)).classList.add('active');
+      if(btn.dataset.tab === 'users') renderAdminUsersAndStats();
+      if(btn.dataset.tab === 'parentmsgs') renderAdminParentMessages();
+    });
+  });
+
+  // ---- ضغط الصور قبل الرفع ----
+  function compressImage(file, maxW, quality){
+    maxW = maxW || 900; quality = quality || 0.72;
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const scale = Math.min(1, maxW / img.width);
+          const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ================= إدارة الأخبار =================
+  let pendingNewsImage = null;
+  document.getElementById('newsImgBox').addEventListener('click', ()=> document.getElementById('newsImgInput').click());
+  document.getElementById('newsImgInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    pendingNewsImage = await compressImage(file);
+    const prev = document.getElementById('newsImgPreview');
+    prev.src = pendingNewsImage; prev.style.display = 'block';
+  });
+
+  function resetNewsForm(){
+    document.getElementById('newsEditId').value = '';
+    document.getElementById('newsTitle').value = '';
+    document.getElementById('newsDate').value = '';
+    document.getElementById('newsCat').value = '';
+    document.getElementById('newsExcerpt').value = '';
+    document.getElementById('newsImgPreview').style.display = 'none';
+    document.getElementById('newsFormTitle').textContent = 'إضافة خبر جديد';
+    document.getElementById('newsCancelEdit').style.display = 'none';
+    pendingNewsImage = null;
+  }
+  document.getElementById('newsCancelEdit').addEventListener('click', resetNewsForm);
+
+  document.getElementById('newsSaveBtn').addEventListener('click', async ()=>{
+    const title = document.getElementById('newsTitle').value.trim();
+    const date = document.getElementById('newsDate').value.trim();
+    const cat = document.getElementById('newsCat').value.trim() || 'إعلان';
+    const excerpt = document.getElementById('newsExcerpt').value.trim();
+    if(!title || !date || !excerpt){ alert('يرجى تعبئة العنوان والتاريخ والنص على الأقل'); return; }
+    const editId = document.getElementById('newsEditId').value;
+
+    if(editId){
+      const item = siteNews.find(n=> n.id === editId);
+      if(item){
+        item.title = title; item.date = date; item.cat = cat; item.excerpt = excerpt;
+        if(pendingNewsImage) item.image = pendingNewsImage;
+      }
+    } else {
+      siteNews.unshift({id:genId(), date, title, excerpt, cat, ic:'newspaper', image: pendingNewsImage});
+    }
+    await saveJSON('site-news', siteNews);
+    renderAdminNewsList();
+    resetNewsForm();
+  });
+
+  function renderAdminNewsList(){
+    const wrap = document.getElementById('newsAdminList');
+    if(!siteNews.length){ wrap.innerHTML = '<p class="empty-note">لا توجد أخبار بعد</p>'; return; }
+    wrap.innerHTML = siteNews.map(n=> `
+      <div class="admin-list-item">
+        <div class="admin-list-thumb">${n.image ? `<img src="${n.image}">` : icon(n.ic || 'newspaper', 18)}</div>
+        <div class="admin-list-info">
+          <div class="t">${escapeHtml(n.title)}</div>
+          <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}</div>
+        </div>
+        <div class="admin-list-actions">
+          <button class="admin-mini-btn edit" data-edit-news="${n.id}" title="تعديل"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4z"/></svg></button>
+          <button class="admin-mini-btn danger" data-del-news="${n.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
+        </div>
+      </div>`).join('');
+
+    wrap.querySelectorAll('[data-edit-news]').forEach(b=> b.addEventListener('click', ()=>{
+      const item = siteNews.find(n=> n.id === b.dataset.editNews);
+      if(!item) return;
+      document.getElementById('newsEditId').value = item.id;
+      document.getElementById('newsTitle').value = item.title;
+      document.getElementById('newsDate').value = item.date;
+      document.getElementById('newsCat').value = item.cat;
+      document.getElementById('newsExcerpt').value = item.excerpt;
+      document.getElementById('newsFormTitle').textContent = 'تعديل الخبر';
+      document.getElementById('newsCancelEdit').style.display = 'inline-flex';
+      const prev = document.getElementById('newsImgPreview');
+      if(item.image){ prev.src = item.image; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
+      pendingNewsImage = null;
+      window.scrollTo({top:0, behavior:'smooth'});
+    }));
+    wrap.querySelectorAll('[data-del-news]').forEach(b=> b.addEventListener('click', async ()=>{
+      if(!confirm('هل تريد حذف هذا الخبر؟')) return;
+      siteNews = siteNews.filter(n=> n.id !== b.dataset.delNews);
+      await saveJSON('site-news', siteNews);
+      renderAdminNewsList();
+    }));
+  }
+
+  // ================= إدارة المناسبات =================
+  function resetEventForm(){
+    document.getElementById('eventEditId').value = '';
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventDate').value = '';
+    document.getElementById('eventDesc').value = '';
+    document.getElementById('eventFormTitle').textContent = 'إضافة مناسبة جديدة';
+    document.getElementById('eventCancelEdit').style.display = 'none';
+  }
+  document.getElementById('eventCancelEdit').addEventListener('click', resetEventForm);
+
+  document.getElementById('eventSaveBtn').addEventListener('click', async ()=>{
+    const title = document.getElementById('eventTitle').value.trim();
+    const date = document.getElementById('eventDate').value.trim();
+    const desc = document.getElementById('eventDesc').value.trim();
+    if(!title || !date){ alert('يرجى تعبئة العنوان والتاريخ على الأقل'); return; }
+    const editId = document.getElementById('eventEditId').value;
+
+    if(editId){
+      const item = siteEvents.find(ev=> ev.id === editId);
+      if(item){ item.title = title; item.date = date; item.desc = desc; }
+    } else {
+      siteEvents.push({id:genId(), date, title, desc, ic:'calendarStar'});
+    }
+    await saveJSON('site-events', siteEvents);
+    renderAdminEventsList();
+    resetEventForm();
+  });
+
+  function renderAdminEventsList(){
+    const wrap = document.getElementById('eventsAdminList');
+    if(!siteEvents.length){ wrap.innerHTML = '<p class="empty-note">لا توجد مناسبات بعد</p>'; return; }
+    wrap.innerHTML = siteEvents.map(ev=> `
+      <div class="admin-list-item">
+        <div class="admin-list-thumb">${icon(ev.ic || 'calendarStar', 18)}</div>
+        <div class="admin-list-info">
+          <div class="t">${escapeHtml(ev.title)}</div>
+          <div class="s">${escapeHtml(ev.date)}</div>
+        </div>
+        <div class="admin-list-actions">
+          <button class="admin-mini-btn edit" data-edit-event="${ev.id}" title="تعديل"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4z"/></svg></button>
+          <button class="admin-mini-btn danger" data-del-event="${ev.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
+        </div>
+      </div>`).join('');
+
+    wrap.querySelectorAll('[data-edit-event]').forEach(b=> b.addEventListener('click', ()=>{
+      const item = siteEvents.find(ev=> ev.id === b.dataset.editEvent);
+      if(!item) return;
+      document.getElementById('eventEditId').value = item.id;
+      document.getElementById('eventTitle').value = item.title;
+      document.getElementById('eventDate').value = item.date;
+      document.getElementById('eventDesc').value = item.desc;
+      document.getElementById('eventFormTitle').textContent = 'تعديل المناسبة';
+      document.getElementById('eventCancelEdit').style.display = 'inline-flex';
+      window.scrollTo({top:0, behavior:'smooth'});
+    }));
+    wrap.querySelectorAll('[data-del-event]').forEach(b=> b.addEventListener('click', async ()=>{
+      if(!confirm('هل تريد حذف هذه المناسبة؟')) return;
+      siteEvents = siteEvents.filter(ev=> ev.id !== b.dataset.delEvent);
+      await saveJSON('site-events', siteEvents);
+      renderAdminEventsList();
+    }));
+  }
+
+  // ================= الفروض والاختبارات =================
+  let adminExamLevel = "";
+  function renderAdminLevelTabs(){
+    const wrap = document.getElementById('adminLevelTabs');
+    const levelNames = Object.keys(siteLevels);
+    adminExamLevel = adminExamLevel || levelNames[0];
+    wrap.innerHTML = levelNames.map(lvl=>
+      `<button class="admin-tab-btn level-tab-btn ${lvl===adminExamLevel?'active':''}" data-lvl="${escapeHtml(lvl)}">${escapeHtml(lvl)}</button>`).join('');
+    wrap.querySelectorAll('[data-lvl]').forEach(b=> b.addEventListener('click', ()=>{
+      adminExamLevel = b.dataset.lvl;
+      renderAdminLevelTabs();
+      renderAdminExamList();
+    }));
+    renderAdminExamList();
+  }
+
+  document.getElementById('examSaveBtn').addEventListener('click', async ()=>{
+    const subj = document.getElementById('examSubj').value.trim();
+    const type = document.getElementById('examType').value;
+    const date = document.getElementById('examDate').value.trim();
+    const time = document.getElementById('examTime').value.trim();
+    if(!subj || !date || !time){ alert('يرجى تعبئة كل الحقول'); return; }
+    if(!siteLevels[adminExamLevel]) siteLevels[adminExamLevel] = [];
+    siteLevels[adminExamLevel].push({subj, type, date, time});
+    await saveJSON('site-levels', siteLevels);
+    renderAdminExamList();
+    document.getElementById('examSubj').value = '';
+    document.getElementById('examDate').value = '';
+    document.getElementById('examTime').value = '';
+  });
+
+  function renderAdminExamList(){
+    const wrap = document.getElementById('examAdminList');
+    const rows = siteLevels[adminExamLevel] || [];
+    if(!rows.length){ wrap.innerHTML = '<p class="empty-note">لا توجد فروض مسجلة لهذا المستوى</p>'; return; }
+    wrap.innerHTML = rows.map((r, idx)=> `
+      <div class="admin-list-item">
+        <div class="admin-list-thumb">${icon(r.type==='test' ? 'clipboard':'book', 18)}</div>
+        <div class="admin-list-info">
+          <div class="t">${escapeHtml(r.subj)} — ${r.type==='test' ? 'اختبار':'واجب منزلي'}</div>
+          <div class="s">${escapeHtml(r.date)} · ${escapeHtml(r.time)}</div>
+        </div>
+        <div class="admin-list-actions">
+          <button class="admin-mini-btn danger" data-del-exam="${idx}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
+        </div>
+      </div>`).join('');
+    wrap.querySelectorAll('[data-del-exam]').forEach(b=> b.addEventListener('click', async ()=>{
+      siteLevels[adminExamLevel].splice(Number(b.dataset.delExam), 1);
+      await saveJSON('site-levels', siteLevels);
+      renderAdminExamList();
+    }));
+  }
+
+  // ================= إدارة الأسئلة =================
+  function renderAdminQAList(){
+    const wrap = document.getElementById('qaAdminList');
+    if(!siteQuestions.length){ wrap.innerHTML = '<p class="empty-note">لا توجد أسئلة بعد</p>'; return; }
+    wrap.innerHTML = siteQuestions.map(q=> `
+      <div class="admin-list-item" style="align-items:flex-start;">
+        <div class="admin-list-thumb">${icon('message', 16)}</div>
+        <div class="admin-list-info">
+          <div class="t" style="white-space:normal;">${escapeHtml(q.body)}</div>
+          <div class="s">${escapeHtml(q.subj)} · ${escapeHtml(q.author)} · ${escapeHtml(q.time)}</div>
+        </div>
+        <div class="admin-list-actions">
+          <button class="admin-mini-btn danger" data-del-q="${q.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
+        </div>
+      </div>`).join('');
+    wrap.querySelectorAll('[data-del-q]').forEach(b=> b.addEventListener('click', async ()=>{
+      if(!confirm('هل تريد حذف هذا السؤال؟')) return;
+      siteQuestions = siteQuestions.filter(q=> q.id !== b.dataset.delQ);
+      await saveJSON('site-questions', siteQuestions);
+      renderAdminQAList();
+    }));
+  }
+
+  // ================= المستخدمون والإحصائيات =================
+  async function renderAdminUsersAndStats(){
+    const listWrap = document.getElementById('usersAdminList');
+    const summaryWrap = document.getElementById('userStatsSummary');
+    if(!db){ listWrap.innerHTML = '<p class="empty-note">تعذر الاتصال بقاعدة البيانات</p>'; return; }
+    listWrap.innerHTML = 'جاري التحميل...';
+    try{
+      const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
+      const users = [];
+      snap.forEach(doc=> users.push(doc.data()));
+
+      const total = users.length;
+      const students = users.filter(u=> u.role === 'تلميذ').length;
+      const parents = users.filter(u=> u.role === 'ولي').length;
+
+      function statCard(label, value){
+        return `<div style="background:#f6f8f9; border-radius:12px; padding:14px 20px; min-width:130px; text-align:center;">
+          <div style="font-size:1.6rem; font-weight:700; color:var(--deep);">${value}</div>
+          <div style="font-size:.8rem; color:#7c8b91;">${label}</div>
+        </div>`;
+      }
+      summaryWrap.innerHTML =
+        statCard('إجمالي المسجلين', total) +
+        statCard('تلاميذ', students) +
+        statCard('أولياء تلاميذ', parents);
+
+      if(!total){
+        listWrap.innerHTML = '<p class="empty-note">لا يوجد مسجلون بعد</p>';
+        return;
+      }
+
+      listWrap.innerHTML = users.map(u=>{
+        const name = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'بدون اسم';
+        const roleLabel = u.role === 'ولي' ? 'ولي تلميذ' : 'تلميذ';
+        const extra = u.role === 'ولي'
+          ? `${u.studentName ? 'الابن: ' + u.studentName : ''}${u.parentPhone ? ' · الهاتف: ' + u.parentPhone : ''}`
+          : (u.studentName || '');
+        let dateStr = '';
+        try{ if(u.createdAt && u.createdAt.toDate) dateStr = u.createdAt.toDate().toLocaleDateString('ar-DZ'); }catch(e){}
+        return `<div class="admin-list-item" style="align-items:flex-start;">
+          <div class="admin-list-thumb">${escapeHtml(name.charAt(0)||'م')}</div>
+          <div class="admin-list-info">
+            <div class="t">${escapeHtml(name)} <span style="font-size:.75rem; color:#7c8b91;">(${roleLabel})</span></div>
+            <div class="s">${escapeHtml(u.email || '')}${extra ? ' · ' + escapeHtml(extra) : ''}${dateStr ? ' · انضم في ' + dateStr : ''}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }catch(e){
+      console.error(e);
+      listWrap.innerHTML = '<p class="empty-note">حدث خطأ أثناء تحميل قائمة المستخدمين. تأكد من تفعيل قواعد الحماية (Security Rules) بشكل صحيح.</p>';
+    }
+  }
+
+  // ================= رسائل الأولياء =================
+  async function renderAdminParentMessages(){
+    const wrap = document.getElementById('parentThreadsAdminList');
+    if(!db){ wrap.innerHTML = '<p class="empty-note">تعذر الاتصال بقاعدة البيانات</p>'; return; }
+    wrap.innerHTML = 'جاري التحميل...';
+    try{
+      const snap = await db.collection('parentMessages').orderBy('updatedAt', 'desc').get();
+      if(snap.empty){
+        wrap.innerHTML = '<p class="empty-note">لا توجد رسائل من الأولياء بعد</p>';
+        return;
+      }
+      wrap.innerHTML = '';
+      snap.forEach(doc => {
+        const data = doc.data();
+        const parentUid = doc.id;
+        const box = document.createElement('div');
+        box.className = 'admin-card';
+        box.style.marginBottom = '14px';
+        const msgs = (data.messages || []).map(m => `
+          <div style="margin-bottom:6px; text-align:${m.from==='parent' ? 'left' : 'right'};">
+            <span style="display:inline-block; max-width:80%; padding:6px 10px; border-radius:8px; background:${m.from==='parent' ? '#f6f8f9' : 'var(--deep)'}; color:${m.from==='parent' ? '#222' : '#fff'}; font-size:.9rem;">
+              ${escapeHtml(m.text)}
+            </span>
+          </div>`).join('');
+        box.innerHTML = `
+          <h4>${escapeHtml(data.parentName || 'ولي')} ${data.studentName ? '— ابنه: ' + escapeHtml(data.studentName) : ''}</h4>
+          <div style="max-height:200px; overflow-y:auto; margin:10px 0;">${msgs || '<p class="empty-note">لا رسائل</p>'}</div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" placeholder="اكتب رداً..." class="adminReplyInput" style="flex:1;">
+            <button class="btn gold adminReplyBtn">إرسال</button>
+          </div>`;
+        box.querySelector('.adminReplyBtn').addEventListener('click', async ()=>{
+          const input = box.querySelector('.adminReplyInput');
+          const text = input.value.trim();
+          if(!text) return;
+          try{
+            await db.collection('parentMessages').doc(parentUid).set({
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              messages: firebase.firestore.FieldValue.arrayUnion({ from: 'admin', text, time: new Date().toISOString() })
+            }, { merge: true });
+            input.value = '';
+            renderAdminParentMessages();
+          }catch(e){
+            console.error(e);
+            alert('تعذر إرسال الرد.');
+          }
+        });
+        wrap.appendChild(box);
+      });
+    }catch(e){
+      console.error(e);
+      wrap.innerHTML = '<p class="empty-note">حدث خطأ أثناء تحميل الرسائل. تأكد من تفعيل قواعد الحماية المحدّثة.</p>';
+    }
+  }
+</script>
+</body>
+</html>
