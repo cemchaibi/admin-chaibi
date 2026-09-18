@@ -705,23 +705,43 @@
   function renderAdminQAList(){
     const wrap = document.getElementById('qaAdminList');
     if(!siteQuestions.length){ wrap.innerHTML = '<p class="empty-note">لا توجد أسئلة بعد</p>'; return; }
-    wrap.innerHTML = siteQuestions.map(q=> `
-      <div class="admin-list-item" style="align-items:flex-start;">
-        <div class="admin-list-thumb">${icon('message', 16)}</div>
-        <div class="admin-list-info">
-          <div class="t" style="white-space:normal;">${escapeHtml(q.body)}</div>
-          <div class="s">${escapeHtml(q.subj)} · ${escapeHtml(q.author)} · ${escapeHtml(q.time)}</div>
-        </div>
-        <div class="admin-list-actions">
+    wrap.innerHTML = '';
+    siteQuestions.forEach(q=>{
+      const box = document.createElement('div');
+      box.className = 'admin-card';
+      box.style.marginBottom = '14px';
+      box.innerHTML = `
+        <div style="display:flex; gap:12px; align-items:flex-start;">
+          <div class="admin-list-thumb">${icon('message', 16)}</div>
+          <div style="flex:1;">
+            <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(q.body)}</div>
+            <div style="font-size:.78rem; color:#8a959a;">${escapeHtml(q.subj)} · ${escapeHtml(q.author)} · ${escapeHtml(q.time)} · ${(q.likes||[]).length} إعجاب</div>
+            ${q.attachment ? `<img src="${q.attachment}" style="max-width:160px; border-radius:8px; margin-top:8px;">` : ''}
+          </div>
           <button class="admin-mini-btn danger" data-del-q="${q.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
         </div>
-      </div>`).join('');
-    wrap.querySelectorAll('[data-del-q]').forEach(b=> b.addEventListener('click', async ()=>{
-      if(!confirm('هل تريد حذف هذا السؤال؟')) return;
-      siteQuestions = siteQuestions.filter(q=> q.id !== b.dataset.delQ);
-      await saveJSON('site-questions', siteQuestions);
-      renderAdminQAList();
-    }));
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid #f0e8d5;">
+          <textarea class="answerInput" placeholder="اكتب إجابة الإدارة/الأستاذ هنا..." style="width:100%; min-height:60px; border:1px solid #e4d9bd; border-radius:10px; padding:10px; font-family:'IBM Plex Sans Arabic',sans-serif; font-size:.88rem;">${q.answer ? escapeHtml(q.answer.text) : ''}</textarea>
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+            <button class="btn gold answerSaveBtn">${q.answer ? 'تحديث الإجابة' : 'حفظ الإجابة'}</button>
+            ${q.answer ? `<span style="font-size:.78rem; color:#8a959a;">${(q.answer.likes||[]).length} إعجاب على الإجابة</span>` : ''}
+          </div>
+        </div>`;
+      box.querySelector('.answerSaveBtn').addEventListener('click', async ()=>{
+        const text = box.querySelector('.answerInput').value.trim();
+        if(!text) return;
+        q.answer = { text, author: 'الإدارة', time: new Date().toLocaleDateString('ar-DZ'), likes: (q.answer && q.answer.likes) || [] };
+        await saveJSON('site-questions', siteQuestions);
+        renderAdminQAList();
+      });
+      box.querySelector('[data-del-q]').addEventListener('click', async ()=>{
+        if(!confirm('هل تريد حذف هذا السؤال؟')) return;
+        siteQuestions = siteQuestions.filter(x=> x.id !== q.id);
+        await saveJSON('site-questions', siteQuestions);
+        renderAdminQAList();
+      });
+      wrap.appendChild(box);
+    });
   }
 
   // ================= المستخدمون والإحصائيات =================
