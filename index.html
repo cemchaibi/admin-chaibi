@@ -133,6 +133,7 @@
   .admin-level-tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;}
   .empty-note{color:#a2aeb2; font-size:.85rem; text-align:center; padding:20px 0;}
 </style>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
 </head>
 <body>
 
@@ -165,6 +166,7 @@
         <button class="admin-tab-btn" data-tab="qa">فضاء الأسئلة</button>
         <button class="admin-tab-btn" data-tab="users">المستخدمون والإحصائيات</button>
         <button class="admin-tab-btn" data-tab="parentmsgs">رسائل الأولياء</button>
+        <button class="admin-tab-btn" data-tab="settings">إعدادات ومظهر الموقع</button>
       </div>
 
       <!-- NEWS TAB -->
@@ -178,7 +180,10 @@
           </div>
           <div class="admin-field"><label>التصنيف</label><input type="text" id="newsCat" placeholder="مثال: نشاط ثقافي"></div>
           <div class="admin-field"><label>نص مختصر (يظهر في قائمة الأخبار)</label><textarea id="newsExcerpt" placeholder="تفاصيل مختصرة عن الخبر..."></textarea></div>
-          <div class="admin-field"><label>المحتوى الكامل (يظهر في صفحة الخبر — اختياري، وإلا يُستعمل النص المختصر)</label><textarea id="newsContent" style="min-height:130px;" placeholder="اكتب هنا التفاصيل الكاملة للخبر..."></textarea></div>
+          <div class="admin-field">
+            <label>المحتوى الكامل (يظهر في صفحة الخبر — اختياري، وإلا يُستعمل النص المختصر)</label>
+            <div id="newsContentEditor" style="background:#fff; border-radius:0 0 10px 10px;"></div>
+          </div>
           <div class="admin-field">
             <label>صورة الخبر الرئيسية (اختياري)</label>
             <div class="img-upload-box" id="newsImgBox">اضغط هنا لاختيار صورة، أو اتركها فارغة لاستخدام أيقونة افتراضية</div>
@@ -259,12 +264,45 @@
       <div class="admin-panel-section" id="tabParentmsgs">
         <div id="parentThreadsAdminList">جاري التحميل...</div>
       </div>
+
+      <!-- SETTINGS / THEME TAB -->
+      <div class="admin-panel-section" id="tabSettings">
+        <div class="admin-card">
+          <h4>ألوان الموقع</h4>
+          <p style="font-size:.82rem; color:#7c8b91; margin-bottom:14px;">غيّر ألوان الموقع الرئيسية دون الحاجة لتعديل أي كود. التغيير يظهر لكل الزوار فور الحفظ.</p>
+          <div class="admin-grid-2">
+            <div class="admin-field">
+              <label>اللون الأساسي (الأزرق الغامق)</label>
+              <input type="color" id="themeDeep" value="#0e3b4c" style="height:44px; padding:4px;">
+            </div>
+            <div class="admin-field">
+              <label>اللون الذهبي (الأزرار والتمييز)</label>
+              <input type="color" id="themeGold" value="#c99a2e" style="height:44px; padding:4px;">
+            </div>
+            <div class="admin-field">
+              <label>الأزرق الملكي (روابط وأزرار ثانوية)</label>
+              <input type="color" id="themeRoyal" value="#2f6ea8" style="height:44px; padding:4px;">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn gold" id="themeSaveBtn">حفظ الألوان</button>
+            <button class="btn" id="themeResetBtn" style="background:#c7ceD1;">استرجاع الألوان الافتراضية</button>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <h4>نسخة احتياطية من بيانات الموقع</h4>
+          <p style="font-size:.82rem; color:#7c8b91; margin-bottom:14px;">حمّل نسخة من كل الأخبار والمناسبات والفروض والأسئلة كملف واحد، للاحتفاظ بها لديك.</p>
+          <button class="btn gold" id="exportBackupBtn">تحميل نسخة احتياطية (JSON)</button>
+        </div>
+      </div>
     </div>
   </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDZ4hr_MISEoJs67DrPLYxqO0LfsSYPtXY",
@@ -378,6 +416,7 @@
     renderAdminQAList();
     renderAdminUsersAndStats();
     renderAdminParentMessages();
+    loadThemeSettings();
   }
 
   if(auth){
@@ -467,6 +506,23 @@
     });
   }
 
+  // ================= محرر النصوص المتقدم (Quill) =================
+  const newsQuill = new Quill('#newsContentEditor', {
+    theme: 'snow',
+    placeholder: 'اكتب هنا التفاصيل الكاملة للخبر...',
+    modules: {
+      toolbar: [
+        [{ header: [2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ color: [] }, { background: [] }],
+        [{ align: [] }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link'],
+        ['clean']
+      ]
+    }
+  });
+
   // ================= إدارة الأخبار =================
   let pendingNewsImage = null;
   let pendingGallery = [];
@@ -507,7 +563,7 @@
     document.getElementById('newsDate').value = '';
     document.getElementById('newsCat').value = '';
     document.getElementById('newsExcerpt').value = '';
-    document.getElementById('newsContent').value = '';
+    newsQuill.setContents([]);
     document.getElementById('newsImgPreview').style.display = 'none';
     document.getElementById('newsFormTitle').textContent = 'إضافة خبر جديد';
     document.getElementById('newsCancelEdit').style.display = 'none';
@@ -522,7 +578,7 @@
     const date = document.getElementById('newsDate').value.trim();
     const cat = document.getElementById('newsCat').value.trim() || 'إعلان';
     const excerpt = document.getElementById('newsExcerpt').value.trim();
-    const content = document.getElementById('newsContent').value.trim();
+    const content = newsQuill.getText().trim() ? newsQuill.root.innerHTML : '';
     if(!title || !date || !excerpt){ alert('يرجى تعبئة العنوان والتاريخ والنص المختصر على الأقل'); return; }
     const editId = document.getElementById('newsEditId').value;
 
@@ -566,7 +622,7 @@
       document.getElementById('newsDate').value = item.date;
       document.getElementById('newsCat').value = item.cat;
       document.getElementById('newsExcerpt').value = item.excerpt;
-      document.getElementById('newsContent').value = item.content || '';
+      newsQuill.root.innerHTML = item.content || '';
       document.getElementById('newsFormTitle').textContent = 'تعديل الخبر';
       document.getElementById('newsCancelEdit').style.display = 'inline-flex';
       const prev = document.getElementById('newsImgPreview');
@@ -851,6 +907,48 @@
       wrap.innerHTML = '<p class="empty-note">حدث خطأ أثناء تحميل الرسائل. تأكد من تفعيل قواعد الحماية المحدّثة.</p>';
     }
   }
+
+  // ================= إعدادات ومظهر الموقع =================
+  const DEFAULT_THEME = { deep: '#0e3b4c', gold: '#c99a2e', royal: '#2f6ea8' };
+
+  async function loadThemeSettings(){
+    const theme = await loadJSON('site-theme', DEFAULT_THEME);
+    document.getElementById('themeDeep').value = theme.deep || DEFAULT_THEME.deep;
+    document.getElementById('themeGold').value = theme.gold || DEFAULT_THEME.gold;
+    document.getElementById('themeRoyal').value = theme.royal || DEFAULT_THEME.royal;
+  }
+
+  document.getElementById('themeSaveBtn').addEventListener('click', async ()=>{
+    const theme = {
+      deep: document.getElementById('themeDeep').value,
+      gold: document.getElementById('themeGold').value,
+      royal: document.getElementById('themeRoyal').value
+    };
+    const ok = await saveJSON('site-theme', theme);
+    if(ok) alert('تم حفظ الألوان. حدّث الموقع الرئيسي لترى التغيير.');
+  });
+
+  document.getElementById('themeResetBtn').addEventListener('click', async ()=>{
+    document.getElementById('themeDeep').value = DEFAULT_THEME.deep;
+    document.getElementById('themeGold').value = DEFAULT_THEME.gold;
+    document.getElementById('themeRoyal').value = DEFAULT_THEME.royal;
+    const ok = await saveJSON('site-theme', DEFAULT_THEME);
+    if(ok) alert('تم استرجاع الألوان الافتراضية.');
+  });
+
+  document.getElementById('exportBackupBtn').addEventListener('click', ()=>{
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      news: siteNews, events: siteEvents, levels: siteLevels, questions: siteQuestions
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'نسخة-احتياطية-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 </script>
 </body>
 </html>
