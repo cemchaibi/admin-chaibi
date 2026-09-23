@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>ترحيل البيانات — متوسطة شعيبي بومدين</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body{ font-family:'IBM Plex Sans Arabic',sans-serif; background:#faf5ea; color:#123240; margin:0; padding:30px 16px; line-height:1.8; }
+  .card{ max-width:720px; margin:0 auto; background:#fff; border:1px solid #ecdfc2; border-radius:18px; padding:26px; box-shadow:0 6px 20px rgba(20,60,75,.06); }
+  h2{ margin-top:0; color:#0e3b4c; }
+  .btn{ background:#2f6ea8; color:#fff; border:none; padding:11px 22px; border-radius:12px; font:inherit; font-weight:700; cursor:pointer; margin:4px; }
+  .btn.gold{ background:#c99a2e; color:#0a2c3a; } .btn.red{ background:#a8402f; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+  #log{ background:#0e3b4c; color:#e8edf0; border-radius:12px; padding:14px; font-size:.82rem; max-height:360px; overflow-y:auto; white-space:pre-wrap; margin-top:16px; direction:rtl; }
+  .step{ background:#f2e9d8; border-radius:12px; padding:12px 16px; margin:12px 0; font-size:.9rem; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>ترحيل البيانات إلى النظام الجديد</h2>
+  <p>هذه الصفحة تنقل الأخبار والمناسبات والأسئلة من المستندات القديمة (siteData) إلى مستندات مستقلة، وترفع الصور إلى Firebase Storage. <b>شغّلها مرة واحدة فقط</b>، بعد نشر قواعد الحماية الجديدة.</p>
+  <div class="step">1. حمّل نسخة احتياطية أولاً &nbsp; 2. اضغط "بدء الترحيل" &nbsp; 3. تأكد أن الموقع يعرض كل شيء &nbsp; 4. (اختياري) احذف البيانات القديمة</div>
+  <div id="authArea"><button class="btn" id="loginBtn">دخول المدير عبر Google</button></div>
+  <div id="actions" style="display:none;">
+    <button class="btn gold" id="backupBtn">1. تحميل نسخة احتياطية</button>
+    <button class="btn" id="migrateBtn">2. بدء الترحيل</button>
+    <button class="btn red" id="cleanupBtn">4. حذف البيانات القديمة</button>
+  </div>
+  <div id="log">في انتظار تسجيل الدخول...</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyDZ4hr_MISEoJs67DrPLYxqO0LfsSYPtXY",
+    authDomain: "chaibi-1c3aa.firebaseapp.com",
+    projectId: "chaibi-1c3aa",
+    storageBucket: "chaibi-1c3aa.firebasestorage.app",
+    messagingSenderId: "420312727383",
+    appId: "1:420312727383:web:68e84368b932e50facc812"
+  });
+  const db = firebase.firestore(), auth = firebase.auth();
+  let storage = null; try{ storage = firebase.storage(); }catch(e){}
+  const ADMIN_EMAILS = ["cemchaibi@gmail.com"];
+  const logBox = document.getElementById('log');
+  function log(msg){ logBox.textContent += '\n' + msg; logBox.scrollTop = logBox.scrollHeight; }
+  const asArray = x => Array.isArray(x) ? x : [];
+  const safeId = (id, fallback) => (typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id)) ? id : fallback;
+
+  let storageOk = !!storage;
+  async function toStorage(dataUrl, path){
+    if(!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return dataUrl || null;
+    if(!storageOk) return dataUrl;
+    try{
+      const ref = storage.ref(path);
+      await ref.putString(dataUrl, 'data_url');
+      return await ref.getDownloadURL();
+    }catch(e){
+      storageOk = false;
+      log('⚠️ تعذر الرفع إلى Storage (' + (e.code || e.message) + ') — ستبقى الصور داخل المستندات.');
+      return dataUrl;
+    }
+  }
+  async function readOld(key){
+    const d = await db.collection('siteData').doc(key).get();
+    return d.exists ? d.data().items : null;
+  }
+
+  auth.onAuthStateChanged(u=>{
+    if(!u) return;
+    if(!ADMIN_EMAILS.includes((u.email||'').toLowerCase())){ log('❌ هذا الحساب غير مخوّل: ' + u.email); auth.signOut(); return; }
+    if(!u.emailVerified){ log('❌ بريد المدير غير مؤكَّد — ادخل عبر Google.'); return; }
+    document.getElementById('authArea').style.display = 'none';
+    document.getElementById('actions').style.display = 'block';
+    log('✅ تم الدخول كمدير: ' + u.email);
+  });
+  document.getElementById('loginBtn').onclick = ()=> auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=> log('❌ ' + e.message));
+
+  document.getElementById('backupBtn').onclick = async ()=>{
+    const data = {};
+    for(const k of ['site-news','site-events','site-levels','site-questions','site-theme']) data[k] = await readOld(k);
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'backup-before-migration-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    log('💾 تم تحميل النسخة الاحتياطية.');
+  };
+
+  document.getElementById('migrateBtn').onclick = async ()=>{
+    const btn = document.getElementById('migrateBtn');
+    const done = await db.collection('siteData').doc('migration-v2').get();
+    if(done.exists && !confirm('تم الترحيل سابقاً. إعادة التشغيل ستستبدل العناصر بنفس المعرّف. متابعة؟')) return;
+    btn.disabled = true;
+    const base = Date.now();
+    let counts = { news:0, events:0, questions:0, replies:0 };
+    try{
+      // ---- الأخبار ----
+      const news = asArray(await readOld('site-news'));
+      log('📰 الأخبار: ' + news.length);
+      for(let i = 0; i < news.length; i++){
+        const n = news[i];
+        const id = safeId(n.id, db.collection('news').doc().id);
+        const image = await toStorage(n.image, `news/${id}/main.jpg`);
+        const gallery = [];
+        for(let k = 0; k < asArray(n.gallery).length; k++) gallery.push(await toStorage(n.gallery[k], `news/${id}/g-${k}.jpg`));
+        await db.collection('news').doc(id).set({
+          title: n.title || '', date: n.date || '', cat: n.cat || 'إعلان', excerpt: n.excerpt || '',
+          content: n.content ? DOMPurify.sanitize(n.content, { USE_PROFILES:{ html:true }, FORBID_TAGS:['style','script','iframe','form','input','button','object','embed'] }) : '',
+          image: image || null, gallery, ic: n.ic || 'newspaper',
+          createdAt: firebase.firestore.Timestamp.fromMillis(base - i * 60000) // يحافظ على نفس الترتيب
+        });
+        counts.news++; log('  ✓ ' + (n.title || id));
+      }
+      // ---- المناسبات ----
+      const events = asArray(await readOld('site-events'));
+      log('📅 المناسبات: ' + events.length);
+      for(let i = 0; i < events.length; i++){
+        const ev = events[i];
+        const id = safeId(ev.id, db.collection('events').doc().id);
+        await db.collection('events').doc(id).set({ title: ev.title || '', date: ev.date || '', desc: ev.desc || '', ic: ev.ic || 'calendarStar', order: i });
+        counts.events++;
+      }
+      // ---- الأسئلة + الردود ----
+      const qs = asArray(await readOld('site-questions'));
+      log('❓ الأسئلة: ' + qs.length);
+      for(let i = 0; i < qs.length; i++){
+        const q = qs[i];
+        const id = safeId(q.id, db.collection('questions').doc().id);
+        const owner = safeId(q.authorUid, 'legacy');
+        const attachment = await toStorage(q.attachment, `questions/${owner}/${id}.jpg`);
+        const doc = {
+          subj: q.subj || '', body: q.body || '', author: q.author || 'مستخدم', authorUid: q.authorUid || null,
+          authorPhoto: (typeof q.authorPhoto === 'string') ? q.authorPhoto : null,
+          attachment: attachment || null, likes: asArray(q.likes),
+          answerLikes: q.answer ? asArray(q.answer.likes) : [],
+          time: q.time || '', createdAt: firebase.firestore.Timestamp.fromMillis(base - i * 60000)
+        };
+        if(q.answer && q.answer.text) doc.answer = { text: q.answer.text, author: q.answer.author || 'الإدارة', time: q.answer.time || '' };
+        await db.collection('questions').doc(id).set(doc);
+        const replies = asArray(q.replies);
+        for(let k = 0; k < replies.length; k++){
+          const r = replies[k];
+          await db.collection('questions').doc(id).collection('replies').doc('r' + k).set({
+            uid: r.uid || null, author: r.author || 'مستخدم',
+            authorPhoto: (typeof r.authorPhoto === 'string') ? r.authorPhoto : null,
+            text: r.text || '', likes: asArray(r.likes), time: r.time || '',
+            createdAt: firebase.firestore.Timestamp.fromMillis(base - i * 60000 + (k + 1) * 1000)
+          });
+          counts.replies++;
+        }
+        counts.questions++;
+      }
+      await db.collection('siteData').doc('migration-v2').set({ done: true, at: firebase.firestore.FieldValue.serverTimestamp(), counts });
+      log('\n🎉 تم الترحيل: ' + JSON.stringify(counts));
+      log('افتح الموقع وتأكد أن كل شيء يظهر، ثم يمكنك حذف البيانات القديمة (اختياري).');
+    }catch(e){
+      console.error(e);
+      log('❌ توقف الترحيل: ' + (e.code || e.message) + '\nتأكد من نشر firestore.rules الجديدة ثم أعد المحاولة (الإعادة آمنة).');
+    }
+    btn.disabled = false;
+  };
+
+  document.getElementById('cleanupBtn').onclick = async ()=>{
+    const done = await db.collection('siteData').doc('migration-v2').get();
+    if(!done.exists){ alert('شغّل الترحيل أولاً.'); return; }
+    if(!confirm('سيتم حذف site-news و site-events و site-questions القديمة نهائياً. هل حمّلت النسخة الاحتياطية وتأكدت من الموقع؟')) return;
+    for(const k of ['site-news','site-events','site-questions']){
+      await db.collection('siteData').doc(k).delete();
+      log('🗑️ حُذف ' + k);
+    }
+    log('✅ انتهى التنظيف. جدول الفروض والألوان باقيان كما هما.');
+  };
+</script>
+</body>
+</html>
