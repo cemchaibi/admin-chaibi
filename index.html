@@ -150,13 +150,6 @@
       <input type="email" id="adminEmailInput" placeholder="البريد الإلكتروني" style="margin-bottom:8px;">
       <input type="password" id="adminPassInput" placeholder="كلمة المرور">
       <button class="btn gold" id="adminLoginBtn" style="width:100%;">دخول</button>
-      <div id="adminVerifyBox" style="display:none; margin-top:16px; padding:14px; border-radius:12px; background:#fff7e6; border:1px solid #e6c467; font-size:.84rem; color:#5a4a1f;">
-        لحماية اللوحة، يجب تأكيد بريد المدير مرة واحدة (الدخول عبر Google لا يحتاج هذا).
-        <div style="display:flex; gap:8px; margin-top:10px; justify-content:center; flex-wrap:wrap;">
-          <button class="btn" id="sendVerifyBtn" type="button">إرسال رابط التأكيد</button>
-          <button class="btn gold" id="recheckVerifyBtn" type="button">لقد أكّدت بريدي</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -166,16 +159,13 @@
       <span class="exit-link" id="adminLogoutBtn">تسجيل الخروج</span>
     </div>
     <div class="admin-body">
-      <div id="migrationBanner" style="display:none; background:#fff7e6; border:1px solid #e6c467; color:#5a4a1f; border-radius:14px; padding:14px 18px; margin-bottom:20px; font-size:.88rem;">
-        بياناتك القديمة لم تُنقل بعد إلى النظام الجديد. افتح <a href="migrate.html" style="color:var(--royal); font-weight:700; text-decoration:underline;">صفحة الترحيل</a> مرة واحدة لنقل الأخبار والمناسبات والأسئلة.
-      </div>
       <div class="admin-tabs" id="adminTabs">
         <button class="admin-tab-btn active" data-tab="news">إدارة الأخبار</button>
         <button class="admin-tab-btn" data-tab="events">إدارة المناسبات</button>
         <button class="admin-tab-btn" data-tab="exams">الفروض والاختبارات</button>
         <button class="admin-tab-btn" data-tab="qa">فضاء الأسئلة</button>
         <button class="admin-tab-btn" data-tab="users">المستخدمون والإحصائيات</button>
-        <button class="admin-tab-btn" data-tab="parentmsgs">رسائل الأولياء</button>
+        <button class="admin-tab-btn" data-tab="parentmsgs">دردشة الأولياء العامة</button>
         <button class="admin-tab-btn" data-tab="settings">إعدادات ومظهر الموقع</button>
       </div>
 
@@ -312,9 +302,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDZ4hr_MISEoJs67DrPLYxqO0LfsSYPtXY",
@@ -325,39 +313,21 @@
     appId: "1:420312727383:web:68e84368b932e50facc812",
     measurementId: "G-B21K02ZS8Y"
   };
-  // ملاحظة أمنية: هذه القائمة لإظهار الواجهة فقط. الحماية الحقيقية في firestore.rules و storage.rules
-  // (المدير = بريد في القائمة + بريد مؤكَّد). أي تعديل هنا يجب أن يُكرَّر هناك.
+  // بريد/بريدات المدير — يجب أن يطابق نفس القائمة الموجودة في index.html وفي firestore.rules
   const ADMIN_EMAILS = ["cemchaibi@gmail.com"];
 
-  let db = null, auth = null, storage = null;
+  let db = null, auth = null;
   try{
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     auth = firebase.auth();
   }catch(e){ console.error('Firebase init failed', e); }
-  try{ storage = firebase.storage(); }catch(e){ console.warn('Firebase Storage غير متاح', e); }
-
-  const FV = firebase.firestore.FieldValue;
 
   function isAdminUser(user){
     return !!(user && user.email && ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(user.email.toLowerCase()));
   }
   function escapeHtml(s){
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function safeUrl(u){
-    if(typeof u !== 'string') return '';
-    if(/^https:\/\//i.test(u) || /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(u)) return escapeHtml(u);
-    return '';
-  }
-  function cleanHtml(html){
-    if(window.DOMPurify){
-      return DOMPurify.sanitize(html || '', {
-        USE_PROFILES: { html: true },
-        FORBID_TAGS: ['style', 'script', 'iframe', 'form', 'input', 'button', 'object', 'embed']
-      });
-    }
-    return '';
+    return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
   function friendlyAuthError(code){
     const map = {
@@ -374,27 +344,39 @@
 
   // ================= أيقونات =================
   const ICON_PATHS = {
+    school: '<path d="M4 21V8.5l8-4.2 8 4.2V21"/><path d="M9 21v-6.5h6V21"/><path d="M9 11h.01M15 11h.01"/>',
+    book: '<path d="M4 5.2c2.2-1 5.2-1 8 1 2.8-2 5.8-2 8-1v13.6c-2.2-1-5.2-1-8 1-2.8-2-5.8-2-8-1V5.2z"/><path d="M12 6.2v13.6"/>',
+    trophy: '<path d="M8 4h8v4.2a4 4 0 0 1-8 0V4z"/><path d="M6 5H4.5A2 2 0 0 0 6 9"/><path d="M18 5h1.5A2 2 0 0 1 18 9"/><path d="M12 12.2V16"/><path d="M9 20h6"/><path d="M10 16h4v4h-4z"/>',
+    flask: '<path d="M9.5 3h5"/><path d="M10.2 3v6.3l-5 8.7a1.8 1.8 0 0 0 1.6 2.7h10.4a1.8 1.8 0 0 0 1.6-2.7l-5-8.7V3"/><path d="M7.8 15h8.4"/>',
+    palette: '<path d="M12 3.2a8.8 8.8 0 1 0 0 17.6c1.1 0 1.9-.6 1.9-1.8 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.2 0-.9.7-1.6 1.6-1.6h1.9a3.9 3.9 0 0 0 3.9-3.9c0-4.3-3.7-7.8-8.3-7.8z"/><circle cx="7.6" cy="12" r="1"/><circle cx="9.4" cy="8.2" r="1"/><circle cx="14.4" cy="7.6" r="1"/><circle cx="16.6" cy="11" r="1"/>',
+    clipboard: '<rect x="5.5" y="4" width="13" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 12.3l2 2 4-4.3"/>',
+    backpack: '<path d="M9 3.2h6a1 1 0 0 1 1 1v1.6h1a2 2 0 0 1 2 2V18a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V7.8a2 2 0 0 1 2-2h1V4.2a1 1 0 0 1 1-1z"/><path d="M9 12h6"/><path d="M9 3.2v3.6h6V3.2"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.4 3.8 5.6 3.8 9s-1.3 6.6-3.8 9c-2.5-2.4-3.8-5.6-3.8-9S9.5 5.4 12 3z"/>',
+    flag: '<path d="M5.5 3v18"/><path d="M5.5 4.2h11l-2 3.8 2 3.8h-11"/>',
+    flower: '<circle cx="12" cy="12" r="2.2"/><path d="M12 3.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"/><path d="M12 15.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"/><path d="M3.2 12a2.8 2.8 0 1 1 5.6 0 2.8 2.8 0 0 1-5.6 0z"/><path d="M15.2 12a2.8 2.8 0 1 1 5.6 0 2.8 2.8 0 0 1-5.6 0z"/>',
+    cap: '<path d="M12 3.2 2.5 8l9.5 4.8L21.5 8 12 3.2z"/><path d="M6.2 10.4V16c0 1.6 2.8 3 5.8 3s5.8-1.4 5.8-3v-5.6"/><path d="M21.5 8v6"/>',
     newspaper: '<rect x="3" y="5.2" width="13.2" height="14.6" rx="1.6"/><path d="M16.2 8h4.3v8.6a2 2 0 0 1-2 2h-2.3"/><path d="M6 9.4h7.2M6 12.2h7.2M6 15h4.8"/>',
     calendarStar: '<rect x="3" y="5" width="18" height="16" rx="2.2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M12 13.2l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3z"/>',
-    clipboard: '<rect x="5.5" y="4" width="13" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 12.3l2 2 4-4.3"/>',
-    book: '<path d="M4 5.2c2.2-1 5.2-1 8 1 2.8-2 5.8-2 8-1v13.6c-2.2-1-5.2-1-8 1-2.8-2-5.8-2-8-1V5.2z"/><path d="M12 6.2v13.6"/>',
     message: '<path d="M21 11.6a8.5 8.5 0 0 1-9 8.5 8.7 8.7 0 0 1-3.8-.9L3 20.2l1.2-4.4A8.5 8.5 0 1 1 21 11.6z"/>',
   };
   function icon(name, size){
     size = size || 20;
-    return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON_PATHS[name] || ICON_PATHS.newspaper}</svg>`;
+    return `<span class="icon-badge"><svg viewBox="0 0 24 24" width="${size}" height="${size}">${ICON_PATHS[name] || ''}</svg></span>`;
   }
-  const EDIT_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4z"/></svg>';
-  const DEL_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>';
 
-  // ================= البيانات =================
-  const DEFAULT_LEVELS = { "الأولى متوسط":[], "الثانية متوسط":[], "الثالثة متوسط":[], "الرابعة متوسط":[] };
-  let siteNews = [], siteEvents = [], siteLevels = {}, siteQuestions = [], siteReplies = {};
+  // ================= بيانات افتراضية (تُستخدم فقط إن كانت القاعدة فارغة) =================
+  const DEFAULT_NEWS = [];
+  const DEFAULT_EVENTS = [];
+  const DEFAULT_LEVELS = {
+    "الأولى متوسط":[], "الثانية متوسط":[], "الثالثة متوسط":[], "الرابعة متوسط":[]
+  };
+  const DEFAULT_QUESTIONS = [];
+
+  let siteNews = [], siteEvents = [], siteLevels = {}, siteQuestions = [];
 
   function genId(){ return 'id' + Date.now() + Math.floor(Math.random()*1000); }
-  function docsOf(snap){ return snap.docs.map(d=> Object.assign({ id: d.id }, d.data({ serverTimestamps: 'estimate' }))); }
-
   async function loadJSON(key, fallback){
+    if(!db){ return JSON.parse(JSON.stringify(fallback)); }
     try{
       const doc = await db.collection('siteData').doc(key).get();
       if(doc.exists && doc.data().items !== undefined) return doc.data().items;
@@ -402,72 +384,22 @@
     return JSON.parse(JSON.stringify(fallback));
   }
   async function saveJSON(key, data){
+    if(!db){ alert('تعذر الاتصال بقاعدة البيانات'); return false; }
     try{ await db.collection('siteData').doc(key).set({items:data}); return true; }
-    catch(e){ console.error(e); alert('تعذر الحفظ — تحقق من الاتصال ومن نشر firestore.rules الجديدة'); return false; }
-  }
-
-  async function loadNews(){
-    siteNews = docsOf(await db.collection('news').orderBy('createdAt', 'desc').get());
-  }
-  async function loadEvents(){
-    siteEvents = docsOf(await db.collection('events').orderBy('order', 'asc').get());
-  }
-  async function loadQuestions(){
-    siteQuestions = docsOf(await db.collection('questions').orderBy('createdAt', 'desc').limit(200).get());
-    const rs = await db.collectionGroup('replies').get();
-    const g = {};
-    rs.docs.forEach(d=>{
-      const qid = d.ref.parent.parent.id;
-      (g[qid] = g[qid] || []).push(Object.assign({ id: d.id }, d.data()));
-    });
-    Object.values(g).forEach(a=> a.sort((x,y)=> ((x.createdAt && x.createdAt.toMillis()) || 0) - ((y.createdAt && y.createdAt.toMillis()) || 0)));
-    siteReplies = g;
+    catch(e){ console.error('Firestore save failed for', key, e); alert('تعذر الحفظ — تحقق من اتصالك بالإنترنت أو من صلاحيات Firestore Rules'); return false; }
   }
 
   async function initAdminData(){
-    const results = await Promise.allSettled([
-      loadNews(), loadEvents(), loadQuestions(),
-      loadJSON('site-levels', DEFAULT_LEVELS).then(v=> siteLevels = v)
-    ]);
-    results.forEach(r=>{ if(r.status === 'rejected') console.error(r.reason); });
-    // تنبيه إن كانت البيانات القديمة لم تُرحَّل بعد
-    try{
-      const [mig, old] = await Promise.all([
-        db.collection('siteData').doc('migration-v2').get(),
-        db.collection('siteData').doc('site-news').get()
-      ]);
-      if(!mig.exists && old.exists) document.getElementById('migrationBanner').style.display = 'block';
-    }catch(e){}
+    siteNews = await loadJSON('site-news', DEFAULT_NEWS);
+    siteEvents = await loadJSON('site-events', DEFAULT_EVENTS);
+    siteLevels = await loadJSON('site-levels', DEFAULT_LEVELS);
+    siteQuestions = await loadJSON('site-questions', DEFAULT_QUESTIONS);
   }
-
-  // رفع صورة إلى Storage (أو الاحتفاظ بها base64 داخل المستند إن لم يكن Storage مفعّلاً)
-  let storageWarned = false;
-  async function uploadImage(dataUrl, path){
-    if(!dataUrl || !/^data:/.test(dataUrl)) return dataUrl || null; // رابط موجود مسبقاً
-    if(storage){
-      try{
-        const ref = storage.ref(path);
-        await ref.putString(dataUrl, 'data_url', { contentType: 'image/jpeg' });
-        return await ref.getDownloadURL();
-      }catch(e){
-        console.warn('Storage upload failed', e);
-        if(!storageWarned){ storageWarned = true; alert('تنبيه: تعذر رفع الصورة إلى Firebase Storage (غير مفعّل أو القواعد غير منشورة). سيتم حفظها داخل الخبر مؤقتاً.'); }
-      }
-    }
-    return dataUrl;
-  }
-  async function deleteStorageUrl(url){
-    if(!storage || typeof url !== 'string' || !url.startsWith('https://firebasestorage.googleapis.com/')) return;
-    try{ await storage.refFromURL(url).delete(); }catch(e){ /* الملف غير موجود — لا بأس */ }
-  }
-  function approxBytes(obj){ try{ return new Blob([JSON.stringify(obj)]).size; }catch(e){ return 0; } }
 
   // ================= تسجيل دخول المدير =================
   const adminLoginWrap = document.getElementById('adminLoginWrap');
   const adminShell = document.getElementById('adminShell');
   const adminErrorBox = document.getElementById('adminError');
-  const verifyBox = document.getElementById('adminVerifyBox');
-  let shellShown = false;
 
   function showAdminError(msg){
     adminErrorBox.textContent = msg;
@@ -475,8 +407,6 @@
   }
 
   async function showAdminShell(){
-    if(shellShown) return;
-    shellShown = true;
     adminLoginWrap.style.display = 'none';
     adminShell.classList.add('open');
     await initAdminData();
@@ -489,30 +419,30 @@
     loadThemeSettings();
   }
 
-  // المدير يحتاج بريداً مؤكَّداً (Google مؤكَّد تلقائياً). الدخول بكلمة مرور يتطلب تأكيد البريد مرة واحدة.
-  async function handleUser(user){
-    if(!user) return;
-    if(!isAdminUser(user)){
-      showAdminError('هذا الحساب (' + user.email + ') غير مخوّل بالدخول إلى لوحة التحكم.');
-      await auth.signOut();
-      return;
-    }
-    if(!user.emailVerified){
-      verifyBox.style.display = 'block';
-      adminErrorBox.style.display = 'none';
-      return;
-    }
-    showAdminShell();
+  if(auth){
+    auth.onAuthStateChanged((user)=>{
+      if(user && isAdminUser(user)){
+        showAdminShell();
+      } else if(user && !isAdminUser(user)){
+        showAdminError('هذا الحساب (' + user.email + ') غير مخوّل بالدخول إلى لوحة التحكم.');
+      }
+    });
   }
-
-  if(auth){ auth.onAuthStateChanged(handleUser); }
 
   document.getElementById('adminGoogleBtn').addEventListener('click', async ()=>{
     if(!auth){ showAdminError('تعذر الاتصال بخدمة تسجيل الدخول.'); return; }
     try{
       const result = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      await handleUser(result.user);
-    }catch(e){ console.error(e); showAdminError(friendlyAuthError(e.code)); }
+      if(!isAdminUser(result.user)){
+        showAdminError('هذا الحساب (' + result.user.email + ') غير مخوّل بالدخول إلى لوحة التحكم.');
+        await auth.signOut();
+        return;
+      }
+      showAdminShell();
+    }catch(e){
+      console.error(e);
+      showAdminError(friendlyAuthError(e.code));
+    }
   });
 
   document.getElementById('adminLoginBtn').addEventListener('click', async ()=>{
@@ -522,21 +452,19 @@
     if(!auth){ showAdminError('تعذر الاتصال بخدمة تسجيل الدخول.'); return; }
     try{
       const cred = await auth.signInWithEmailAndPassword(email, pass);
-      await handleUser(cred.user);
-    }catch(e){ console.error(e); showAdminError(friendlyAuthError(e.code)); }
+      if(!isAdminUser(cred.user)){
+        showAdminError('هذا الحساب غير مخوّل بالدخول إلى لوحة التحكم.');
+        await auth.signOut();
+        return;
+      }
+      showAdminShell();
+    }catch(e){
+      console.error(e);
+      showAdminError(friendlyAuthError(e.code));
+    }
   });
   document.getElementById('adminPassInput').addEventListener('keydown', (e)=>{
     if(e.key === 'Enter') document.getElementById('adminLoginBtn').click();
-  });
-  document.getElementById('sendVerifyBtn').addEventListener('click', async ()=>{
-    try{ await auth.currentUser.sendEmailVerification(); alert('تم إرسال رابط التأكيد إلى بريدك. افتحه ثم اضغط "لقد أكّدت بريدي".'); }
-    catch(e){ console.error(e); alert('تعذر الإرسال، حاول بعد قليل.'); }
-  });
-  document.getElementById('recheckVerifyBtn').addEventListener('click', async ()=>{
-    await auth.currentUser.reload();
-    await auth.currentUser.getIdToken(true); // تحديث التوكن ليحمل email_verified=true
-    if(auth.currentUser.emailVerified){ verifyBox.style.display = 'none'; showAdminShell(); }
-    else alert('البريد لم يُؤكَّد بعد.');
   });
   document.getElementById('adminLogoutBtn').addEventListener('click', async ()=>{
     if(auth) await auth.signOut();
@@ -552,13 +480,12 @@
       document.getElementById('tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)).classList.add('active');
       if(btn.dataset.tab === 'users') renderAdminUsersAndStats();
       if(btn.dataset.tab === 'parentmsgs') renderAdminParentMessages();
-      if(btn.dataset.tab === 'qa') loadQuestions().then(renderAdminQAList).catch(console.error);
     });
   });
 
   // ---- ضغط الصور قبل الرفع ----
   function compressImage(file, maxW, quality){
-    maxW = maxW || 1200; quality = quality || 0.75;
+    maxW = maxW || 900; quality = quality || 0.72;
     return new Promise((resolve, reject)=>{
       const reader = new FileReader();
       reader.onload = (e)=>{
@@ -579,7 +506,7 @@
     });
   }
 
-  // ================= محرر النصوص (Quill) =================
+  // ================= محرر النصوص المتقدم (Quill) =================
   const newsQuill = new Quill('#newsContentEditor', {
     theme: 'snow',
     placeholder: 'اكتب هنا التفاصيل الكاملة للخبر...',
@@ -596,9 +523,9 @@
     }
   });
 
-  // ================= إدارة الأخبار (كل خبر مستند مستقل في news/) =================
-  let pendingNewsImage = null;   // data URL جديدة أو null
-  let pendingGallery = [];       // خليط من روابط موجودة و data URL جديدة
+  // ================= إدارة الأخبار =================
+  let pendingNewsImage = null;
+  let pendingGallery = [];
   document.getElementById('newsImgBox').addEventListener('click', ()=> document.getElementById('newsImgInput').click());
   document.getElementById('newsImgInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
@@ -606,15 +533,14 @@
     pendingNewsImage = await compressImage(file);
     const prev = document.getElementById('newsImgPreview');
     prev.src = pendingNewsImage; prev.style.display = 'block';
-    e.target.value = '';
   });
 
   function renderGalleryPreview(){
     const box = document.getElementById('newsGalleryPreview');
     box.innerHTML = pendingGallery.map((src, i)=> `
       <div style="position:relative;">
-        <img src="${safeUrl(src)}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">
-        <button data-remove-gallery="${i}" style="position:absolute; top:-6px; left:-6px; width:20px; height:20px; border-radius:50%; background:var(--red); color:#fff; font-size:.7rem;">×</button>
+        <img src="${src}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">
+        <button type="button" data-remove-gallery="${i}" style="position:absolute; top:-6px; left:-6px; width:20px; height:20px; border-radius:50%; background:var(--red); color:#fff; font-size:.7rem; line-height:1;">×</button>
       </div>`).join('');
     box.querySelectorAll('[data-remove-gallery]').forEach(b=> b.addEventListener('click', ()=>{
       pendingGallery.splice(Number(b.dataset.removeGallery), 1);
@@ -625,7 +551,8 @@
   document.getElementById('newsGalleryInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
     if(!file) return;
-    pendingGallery.push(await compressImage(file));
+    const compressed = await compressImage(file);
+    pendingGallery.push(compressed);
     renderGalleryPreview();
     e.target.value = '';
   });
@@ -651,48 +578,24 @@
     const date = document.getElementById('newsDate').value.trim();
     const cat = document.getElementById('newsCat').value.trim() || 'إعلان';
     const excerpt = document.getElementById('newsExcerpt').value.trim();
-    // تنظيف المحتوى قبل الحفظ (والموقع ينظّفه مرة ثانية قبل العرض)
-    const content = newsQuill.getText().trim() ? cleanHtml(newsQuill.root.innerHTML) : '';
+    const content = newsQuill.getText().trim() ? newsQuill.root.innerHTML : '';
     if(!title || !date || !excerpt){ alert('يرجى تعبئة العنوان والتاريخ والنص المختصر على الأقل'); return; }
+    const editId = document.getElementById('newsEditId').value;
 
-    const saveBtn = document.getElementById('newsSaveBtn');
-    saveBtn.disabled = true; saveBtn.textContent = 'جاري الحفظ...';
-    try{
-      const editId = document.getElementById('newsEditId').value;
-      const id = editId || db.collection('news').doc().id;
-      const old = editId ? siteNews.find(n=> n.id === editId) : null;
-
-      let image = old ? (old.image || null) : null;
-      if(pendingNewsImage){
-        if(old && old.image) await deleteStorageUrl(old.image);
-        image = await uploadImage(pendingNewsImage, `news/${id}/main-${Date.now()}.jpg`);
+    if(editId){
+      const item = siteNews.find(n=> n.id === editId);
+      if(item){
+        item.title = title; item.date = date; item.cat = cat; item.excerpt = excerpt;
+        item.content = content || '';
+        if(pendingNewsImage) item.image = pendingNewsImage;
+        if(pendingGallery.length) item.gallery = pendingGallery.slice();
       }
-      const gallery = [];
-      for(let i = 0; i < pendingGallery.length; i++){
-        gallery.push(await uploadImage(pendingGallery[i], `news/${id}/g-${Date.now()}-${i}.jpg`));
-      }
-      if(old) for(const u of (old.gallery || [])) if(!gallery.includes(u)) await deleteStorageUrl(u);
-
-      const data = { title, date, cat, excerpt, content, image, gallery, ic: (old && old.ic) || 'newspaper' };
-      if(approxBytes(data) > 950000){
-        alert('الخبر كبير جداً (الصور محفوظة داخل المستند لأن Storage غير مفعّل). قلّل عدد الصور أو فعّل Firebase Storage.');
-        return;
-      }
-      if(editId){
-        await db.collection('news').doc(id).update(data);
-      } else {
-        data.createdAt = FV.serverTimestamp();
-        await db.collection('news').doc(id).set(data);
-      }
-      await loadNews();
-      renderAdminNewsList();
-      resetNewsForm();
-    }catch(e){
-      console.error(e);
-      alert('تعذر حفظ الخبر — تحقق من الاتصال ومن نشر قواعد الحماية الجديدة.');
-    }finally{
-      saveBtn.disabled = false; saveBtn.textContent = 'حفظ الخبر';
+    } else {
+      siteNews.unshift({id:genId(), date, title, excerpt, content: content || '', cat, ic:'newspaper', image: pendingNewsImage, gallery: pendingGallery.slice()});
     }
+    await saveJSON('site-news', siteNews);
+    renderAdminNewsList();
+    resetNewsForm();
   });
 
   function renderAdminNewsList(){
@@ -700,14 +603,14 @@
     if(!siteNews.length){ wrap.innerHTML = '<p class="empty-note">لا توجد أخبار بعد</p>'; return; }
     wrap.innerHTML = siteNews.map(n=> `
       <div class="admin-list-item">
-        <div class="admin-list-thumb">${safeUrl(n.image) ? `<img src="${safeUrl(n.image)}">` : icon('newspaper', 18)}</div>
+        <div class="admin-list-thumb">${n.image ? `<img src="${n.image}">` : icon(n.ic || 'newspaper', 18)}</div>
         <div class="admin-list-info">
           <div class="t">${escapeHtml(n.title)}</div>
           <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}${n.gallery && n.gallery.length ? ' · ' + n.gallery.length + ' صور إضافية' : ''}</div>
         </div>
         <div class="admin-list-actions">
-          <button class="admin-mini-btn edit" data-edit-news="${escapeHtml(n.id)}" title="تعديل">${EDIT_SVG}</button>
-          <button class="admin-mini-btn danger" data-del-news="${escapeHtml(n.id)}" title="حذف">${DEL_SVG}</button>
+          <button class="admin-mini-btn edit" data-edit-news="${n.id}" title="تعديل"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4z"/></svg></button>
+          <button class="admin-mini-btn danger" data-del-news="${n.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
         </div>
       </div>`).join('');
 
@@ -715,16 +618,15 @@
       const item = siteNews.find(n=> n.id === b.dataset.editNews);
       if(!item) return;
       document.getElementById('newsEditId').value = item.id;
-      document.getElementById('newsTitle').value = item.title || '';
-      document.getElementById('newsDate').value = item.date || '';
-      document.getElementById('newsCat').value = item.cat || '';
-      document.getElementById('newsExcerpt').value = item.excerpt || '';
-      newsQuill.setContents([]);
-      newsQuill.clipboard.dangerouslyPasteHTML(0, cleanHtml(item.content || ''));
+      document.getElementById('newsTitle').value = item.title;
+      document.getElementById('newsDate').value = item.date;
+      document.getElementById('newsCat').value = item.cat;
+      document.getElementById('newsExcerpt').value = item.excerpt;
+      newsQuill.root.innerHTML = item.content || '';
       document.getElementById('newsFormTitle').textContent = 'تعديل الخبر';
       document.getElementById('newsCancelEdit').style.display = 'inline-flex';
       const prev = document.getElementById('newsImgPreview');
-      if(safeUrl(item.image)){ prev.src = item.image; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
+      if(item.image){ prev.src = item.image; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
       pendingNewsImage = null;
       pendingGallery = (item.gallery || []).slice();
       renderGalleryPreview();
@@ -732,17 +634,13 @@
     }));
     wrap.querySelectorAll('[data-del-news]').forEach(b=> b.addEventListener('click', async ()=>{
       if(!confirm('هل تريد حذف هذا الخبر؟')) return;
-      const item = siteNews.find(n=> n.id === b.dataset.delNews);
-      try{
-        await db.collection('news').doc(b.dataset.delNews).delete();
-        if(item){ await deleteStorageUrl(item.image); for(const u of (item.gallery || [])) await deleteStorageUrl(u); }
-        await loadNews();
-        renderAdminNewsList();
-      }catch(e){ console.error(e); alert('تعذر الحذف.'); }
+      siteNews = siteNews.filter(n=> n.id !== b.dataset.delNews);
+      await saveJSON('site-news', siteNews);
+      renderAdminNewsList();
     }));
   }
 
-  // ================= إدارة المناسبات (كل مناسبة مستند مستقل في events/) =================
+  // ================= إدارة المناسبات =================
   function resetEventForm(){
     document.getElementById('eventEditId').value = '';
     document.getElementById('eventTitle').value = '';
@@ -759,16 +657,16 @@
     const desc = document.getElementById('eventDesc').value.trim();
     if(!title || !date){ alert('يرجى تعبئة العنوان والتاريخ على الأقل'); return; }
     const editId = document.getElementById('eventEditId').value;
-    try{
-      if(editId){
-        await db.collection('events').doc(editId).update({ title, date, desc });
-      } else {
-        await db.collection('events').add({ title, date, desc, ic: 'calendarStar', order: Date.now() });
-      }
-      await loadEvents();
-      renderAdminEventsList();
-      resetEventForm();
-    }catch(e){ console.error(e); alert('تعذر حفظ المناسبة.'); }
+
+    if(editId){
+      const item = siteEvents.find(ev=> ev.id === editId);
+      if(item){ item.title = title; item.date = date; item.desc = desc; }
+    } else {
+      siteEvents.push({id:genId(), date, title, desc, ic:'calendarStar'});
+    }
+    await saveJSON('site-events', siteEvents);
+    renderAdminEventsList();
+    resetEventForm();
   });
 
   function renderAdminEventsList(){
@@ -776,14 +674,14 @@
     if(!siteEvents.length){ wrap.innerHTML = '<p class="empty-note">لا توجد مناسبات بعد</p>'; return; }
     wrap.innerHTML = siteEvents.map(ev=> `
       <div class="admin-list-item">
-        <div class="admin-list-thumb">${icon('calendarStar', 18)}</div>
+        <div class="admin-list-thumb">${icon(ev.ic || 'calendarStar', 18)}</div>
         <div class="admin-list-info">
           <div class="t">${escapeHtml(ev.title)}</div>
           <div class="s">${escapeHtml(ev.date)}</div>
         </div>
         <div class="admin-list-actions">
-          <button class="admin-mini-btn edit" data-edit-event="${escapeHtml(ev.id)}" title="تعديل">${EDIT_SVG}</button>
-          <button class="admin-mini-btn danger" data-del-event="${escapeHtml(ev.id)}" title="حذف">${DEL_SVG}</button>
+          <button class="admin-mini-btn edit" data-edit-event="${ev.id}" title="تعديل"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4z"/></svg></button>
+          <button class="admin-mini-btn danger" data-del-event="${ev.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
         </div>
       </div>`).join('');
 
@@ -791,34 +689,33 @@
       const item = siteEvents.find(ev=> ev.id === b.dataset.editEvent);
       if(!item) return;
       document.getElementById('eventEditId').value = item.id;
-      document.getElementById('eventTitle').value = item.title || '';
-      document.getElementById('eventDate').value = item.date || '';
-      document.getElementById('eventDesc').value = item.desc || '';
+      document.getElementById('eventTitle').value = item.title;
+      document.getElementById('eventDate').value = item.date;
+      document.getElementById('eventDesc').value = item.desc;
       document.getElementById('eventFormTitle').textContent = 'تعديل المناسبة';
       document.getElementById('eventCancelEdit').style.display = 'inline-flex';
       window.scrollTo({top:0, behavior:'smooth'});
     }));
     wrap.querySelectorAll('[data-del-event]').forEach(b=> b.addEventListener('click', async ()=>{
       if(!confirm('هل تريد حذف هذه المناسبة؟')) return;
-      try{
-        await db.collection('events').doc(b.dataset.delEvent).delete();
-        await loadEvents();
-        renderAdminEventsList();
-      }catch(e){ console.error(e); alert('تعذر الحذف.'); }
+      siteEvents = siteEvents.filter(ev=> ev.id !== b.dataset.delEvent);
+      await saveJSON('site-events', siteEvents);
+      renderAdminEventsList();
     }));
   }
 
-  // ================= الفروض والاختبارات (مستند صغير واحد، المدير فقط يكتبه) =================
+  // ================= الفروض والاختبارات =================
   let adminExamLevel = "";
   function renderAdminLevelTabs(){
     const wrap = document.getElementById('adminLevelTabs');
     const levelNames = Object.keys(siteLevels);
-    adminExamLevel = levelNames.includes(adminExamLevel) ? adminExamLevel : levelNames[0];
+    adminExamLevel = adminExamLevel || levelNames[0];
     wrap.innerHTML = levelNames.map(lvl=>
       `<button class="admin-tab-btn level-tab-btn ${lvl===adminExamLevel?'active':''}" data-lvl="${escapeHtml(lvl)}">${escapeHtml(lvl)}</button>`).join('');
     wrap.querySelectorAll('[data-lvl]').forEach(b=> b.addEventListener('click', ()=>{
       adminExamLevel = b.dataset.lvl;
       renderAdminLevelTabs();
+      renderAdminExamList();
     }));
     renderAdminExamList();
   }
@@ -829,15 +726,13 @@
     const date = document.getElementById('examDate').value.trim();
     const time = document.getElementById('examTime').value.trim();
     if(!subj || !date || !time){ alert('يرجى تعبئة كل الحقول'); return; }
-    siteLevels = await loadJSON('site-levels', DEFAULT_LEVELS); // أحدث نسخة قبل التعديل
     if(!siteLevels[adminExamLevel]) siteLevels[adminExamLevel] = [];
     siteLevels[adminExamLevel].push({subj, type, date, time});
-    if(await saveJSON('site-levels', siteLevels)){
-      renderAdminExamList();
-      document.getElementById('examSubj').value = '';
-      document.getElementById('examDate').value = '';
-      document.getElementById('examTime').value = '';
-    }
+    await saveJSON('site-levels', siteLevels);
+    renderAdminExamList();
+    document.getElementById('examSubj').value = '';
+    document.getElementById('examDate').value = '';
+    document.getElementById('examTime').value = '';
   });
 
   function renderAdminExamList(){
@@ -852,7 +747,7 @@
           <div class="s">${escapeHtml(r.date)} · ${escapeHtml(r.time)}</div>
         </div>
         <div class="admin-list-actions">
-          <button class="admin-mini-btn danger" data-del-exam="${idx}" title="حذف">${DEL_SVG}</button>
+          <button class="admin-mini-btn danger" data-del-exam="${idx}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
         </div>
       </div>`).join('');
     wrap.querySelectorAll('[data-del-exam]').forEach(b=> b.addEventListener('click', async ()=>{
@@ -862,74 +757,45 @@
     }));
   }
 
-  // ================= إدارة الأسئلة (كل سؤال مستند، والردود في مجموعة فرعية) =================
+  // ================= إدارة الأسئلة =================
   function renderAdminQAList(){
     const wrap = document.getElementById('qaAdminList');
     if(!siteQuestions.length){ wrap.innerHTML = '<p class="empty-note">لا توجد أسئلة بعد</p>'; return; }
     wrap.innerHTML = '';
     siteQuestions.forEach(q=>{
-      const replies = siteReplies[q.id] || [];
       const box = document.createElement('div');
       box.className = 'admin-card';
       box.style.marginBottom = '14px';
-      const att = safeUrl(q.attachment);
       box.innerHTML = `
         <div style="display:flex; gap:12px; align-items:flex-start;">
           <div class="admin-list-thumb">${icon('message', 16)}</div>
           <div style="flex:1;">
             <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(q.body)}</div>
-            <div style="font-size:.78rem; color:#8a959a;">${escapeHtml(q.subj)} · ${escapeHtml(q.author)} · ${escapeHtml(q.time)} · ${(q.likes||[]).length} إعجاب · ${replies.length} رد</div>
-            ${att ? `<img src="${att}" style="max-width:160px; border-radius:8px; margin-top:8px;">` : ''}
+            <div style="font-size:.78rem; color:#8a959a;">${escapeHtml(q.subj)} · ${escapeHtml(q.author)} · ${escapeHtml(q.time)} · ${(q.likes||[]).length} إعجاب</div>
+            ${q.attachment ? `<img src="${q.attachment}" style="max-width:160px; border-radius:8px; margin-top:8px;">` : ''}
           </div>
-          <button class="admin-mini-btn danger" data-del-q title="حذف السؤال">${DEL_SVG}</button>
+          <button class="admin-mini-btn danger" data-del-q="${q.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
         </div>
-        ${replies.length ? `<div style="margin-top:10px;">${replies.map(r=> `
-          <div class="admin-list-item" style="margin-bottom:6px; padding:8px 10px;">
-            <div class="admin-list-info">
-              <div class="s">${escapeHtml(r.author || 'مستخدم')}</div>
-              <div style="font-size:.86rem;">${escapeHtml(r.text)}</div>
-            </div>
-            <button class="admin-mini-btn danger" data-del-reply="${escapeHtml(r.id)}" title="حذف الرد">${DEL_SVG}</button>
-          </div>`).join('')}</div>` : ''}
         <div style="margin-top:10px; padding-top:10px; border-top:1px solid #f0e8d5;">
           <textarea class="answerInput" placeholder="اكتب إجابة الإدارة/الأستاذ هنا..." style="width:100%; min-height:60px; border:1px solid #e4d9bd; border-radius:10px; padding:10px; font-family:'IBM Plex Sans Arabic',sans-serif; font-size:.88rem;">${q.answer ? escapeHtml(q.answer.text) : ''}</textarea>
           <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
             <button class="btn gold answerSaveBtn">${q.answer ? 'تحديث الإجابة' : 'حفظ الإجابة'}</button>
-            ${q.answer ? `<span style="font-size:.78rem; color:#8a959a;">${(q.answerLikes||[]).length} إعجاب على الإجابة</span>` : ''}
+            ${q.answer ? `<span style="font-size:.78rem; color:#8a959a;">${(q.answer.likes||[]).length} إعجاب على الإجابة</span>` : ''}
           </div>
         </div>`;
-      const qRef = db.collection('questions').doc(q.id);
       box.querySelector('.answerSaveBtn').addEventListener('click', async ()=>{
         const text = box.querySelector('.answerInput').value.trim();
         if(!text) return;
-        try{
-          // تحديث حقل واحد فقط — لا يمسح الإعجابات أو الردود
-          await qRef.update({ answer: { text, author: 'الإدارة', time: new Date().toLocaleDateString('ar-DZ') } });
-          q.answer = { text, author: 'الإدارة' };
-          renderAdminQAList();
-        }catch(e){ console.error(e); alert('تعذر حفظ الإجابة.'); }
+        q.answer = { text, author: 'الإدارة', time: new Date().toLocaleDateString('ar-DZ'), likes: (q.answer && q.answer.likes) || [] };
+        await saveJSON('site-questions', siteQuestions);
+        renderAdminQAList();
       });
       box.querySelector('[data-del-q]').addEventListener('click', async ()=>{
-        if(!confirm('هل تريد حذف هذا السؤال وكل ردوده؟')) return;
-        try{
-          const rs = await qRef.collection('replies').get();
-          const batch = db.batch();
-          rs.docs.forEach(d=> batch.delete(d.ref));
-          batch.delete(qRef);
-          await batch.commit();
-          await deleteStorageUrl(q.attachment);
-          siteQuestions = siteQuestions.filter(x=> x.id !== q.id);
-          renderAdminQAList();
-        }catch(e){ console.error(e); alert('تعذر الحذف.'); }
+        if(!confirm('هل تريد حذف هذا السؤال؟')) return;
+        siteQuestions = siteQuestions.filter(x=> x.id !== q.id);
+        await saveJSON('site-questions', siteQuestions);
+        renderAdminQAList();
       });
-      box.querySelectorAll('[data-del-reply]').forEach(b=> b.addEventListener('click', async ()=>{
-        if(!confirm('حذف هذا الرد؟')) return;
-        try{
-          await qRef.collection('replies').doc(b.dataset.delReply).delete();
-          siteReplies[q.id] = replies.filter(r=> r.id !== b.dataset.delReply);
-          renderAdminQAList();
-        }catch(e){ console.error(e); alert('تعذر الحذف.'); }
-      }));
       wrap.appendChild(box);
     });
   }
@@ -938,22 +804,33 @@
   async function renderAdminUsersAndStats(){
     const listWrap = document.getElementById('usersAdminList');
     const summaryWrap = document.getElementById('userStatsSummary');
+    if(!db){ listWrap.innerHTML = '<p class="empty-note">تعذر الاتصال بقاعدة البيانات</p>'; return; }
     listWrap.innerHTML = 'جاري التحميل...';
     try{
       const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
       const users = [];
       snap.forEach(doc=> users.push(doc.data()));
+
       const total = users.length;
       const students = users.filter(u=> u.role === 'تلميذ').length;
       const parents = users.filter(u=> u.role === 'ولي').length;
+
       function statCard(label, value){
         return `<div style="background:#f6f8f9; border-radius:12px; padding:14px 20px; min-width:130px; text-align:center;">
           <div style="font-size:1.6rem; font-weight:700; color:var(--deep);">${value}</div>
           <div style="font-size:.8rem; color:#7c8b91;">${label}</div>
         </div>`;
       }
-      summaryWrap.innerHTML = statCard('إجمالي المسجلين', total) + statCard('تلاميذ', students) + statCard('أولياء تلاميذ', parents);
-      if(!total){ listWrap.innerHTML = '<p class="empty-note">لا يوجد مسجلون بعد</p>'; return; }
+      summaryWrap.innerHTML =
+        statCard('إجمالي المسجلين', total) +
+        statCard('تلاميذ', students) +
+        statCard('أولياء تلاميذ', parents);
+
+      if(!total){
+        listWrap.innerHTML = '<p class="empty-note">لا يوجد مسجلون بعد</p>';
+        return;
+      }
+
       listWrap.innerHTML = users.map(u=>{
         const name = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'بدون اسم';
         const roleLabel = u.role === 'ولي' ? 'ولي تلميذ' : 'تلميذ';
@@ -972,87 +849,85 @@
       }).join('');
     }catch(e){
       console.error(e);
-      listWrap.innerHTML = '<p class="empty-note">حدث خطأ أثناء تحميل قائمة المستخدمين. تأكد من نشر قواعد الحماية.</p>';
+      listWrap.innerHTML = '<p class="empty-note">حدث خطأ أثناء تحميل قائمة المستخدمين. تأكد من تفعيل قواعد الحماية (Security Rules) بشكل صحيح.</p>';
     }
   }
 
-  // ================= رسائل الأولياء =================
+  // ================= دردشة الأولياء العامة (مراقبة وحذف) =================
   async function renderAdminParentMessages(){
     const wrap = document.getElementById('parentThreadsAdminList');
+    if(!db){ wrap.innerHTML = '<p class="empty-note">تعذر الاتصال بقاعدة البيانات</p>'; return; }
     wrap.innerHTML = 'جاري التحميل...';
     try{
-      const snap = await db.collection('parentMessages').orderBy('updatedAt', 'desc').get();
-      if(snap.empty){ wrap.innerHTML = '<p class="empty-note">لا توجد رسائل من الأولياء بعد</p>'; return; }
-      wrap.innerHTML = '';
-      snap.forEach(doc => {
-        const data = doc.data();
-        const parentUid = doc.id;
-        const box = document.createElement('div');
-        box.className = 'admin-card';
-        box.style.marginBottom = '14px';
-        const msgs = (data.messages || []).map(m => `
-          <div style="margin-bottom:6px; text-align:${m.from==='parent' ? 'left' : 'right'};">
-            <span style="display:inline-block; max-width:80%; padding:6px 10px; border-radius:8px; background:${m.from==='parent' ? '#f6f8f9' : 'var(--deep)'}; color:${m.from==='parent' ? '#222' : '#fff'}; font-size:.9rem;">
-              ${escapeHtml(m.text)}
-            </span>
-          </div>`).join('');
-        box.innerHTML = `
-          <h4>${escapeHtml(data.parentName || 'ولي')} ${data.studentName ? '— ابنه: ' + escapeHtml(data.studentName) : ''}</h4>
-          <div style="max-height:200px; overflow-y:auto; margin:10px 0;">${msgs || '<p class="empty-note">لا رسائل</p>'}</div>
-          <div style="display:flex; gap:8px;">
-            <input type="text" placeholder="اكتب رداً..." class="adminReplyInput" style="flex:1;">
-            <button class="btn gold adminReplyBtn">إرسال</button>
-          </div>`;
-        box.querySelector('.adminReplyBtn').addEventListener('click', async ()=>{
-          const input = box.querySelector('.adminReplyInput');
-          const text = input.value.trim();
-          if(!text) return;
-          try{
-            await db.collection('parentMessages').doc(parentUid).set({
-              updatedAt: FV.serverTimestamp(),
-              messages: FV.arrayUnion({ from: 'admin', text, time: new Date().toISOString() })
-            }, { merge: true });
-            input.value = '';
-            renderAdminParentMessages();
-          }catch(e){ console.error(e); alert('تعذر إرسال الرد.'); }
-        });
-        wrap.appendChild(box);
-      });
+      const snap = await db.collection('parentsGeneralChat').orderBy('time', 'desc').limit(100).get();
+      if(snap.empty){
+        wrap.innerHTML = '<p class="empty-note">لا توجد رسائل في الدردشة العامة بعد</p>';
+        return;
+      }
+      wrap.innerHTML = snap.docs.map(doc=>{
+        const m = doc.data();
+        let dateStr = '';
+        try{ if(m.time && m.time.toDate) dateStr = m.time.toDate().toLocaleString('ar-DZ'); }catch(e){}
+        return `<div class="admin-list-item" style="align-items:flex-start;">
+          <div class="admin-list-thumb">${icon('message', 16)}</div>
+          <div class="admin-list-info">
+            <div class="t">${escapeHtml(m.author||'ولي')}</div>
+            <div class="s">${m.text ? escapeHtml(m.text) : '(صورة)'} ${dateStr ? '· ' + dateStr : ''}</div>
+            ${m.image ? `<img src="${m.image}" style="max-width:140px; border-radius:8px; margin-top:6px;">` : ''}
+          </div>
+          <div class="admin-list-actions">
+            <button class="admin-mini-btn danger" data-del-msg="${doc.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
+          </div>
+        </div>`;
+      }).join('');
+      wrap.querySelectorAll('[data-del-msg]').forEach(btn=> btn.addEventListener('click', async ()=>{
+        if(!confirm('هل تريد حذف هذه الرسالة نهائياً؟')) return;
+        try{
+          await db.collection('parentsGeneralChat').doc(btn.dataset.delMsg).delete();
+          renderAdminParentMessages();
+        }catch(e){
+          console.error(e);
+          alert('تعذر حذف الرسالة.');
+        }
+      }));
     }catch(e){
       console.error(e);
-      wrap.innerHTML = '<p class="empty-note">حدث خطأ أثناء تحميل الرسائل. تأكد من نشر قواعد الحماية.</p>';
+      wrap.innerHTML = '<p class="empty-note">حدث خطأ أثناء تحميل الرسائل. تأكد من تفعيل قواعد الحماية المحدّثة.</p>';
     }
   }
 
   // ================= إعدادات ومظهر الموقع =================
   const DEFAULT_THEME = { deep: '#0e3b4c', gold: '#c99a2e', royal: '#2f6ea8' };
+
   async function loadThemeSettings(){
     const theme = await loadJSON('site-theme', DEFAULT_THEME);
     document.getElementById('themeDeep').value = theme.deep || DEFAULT_THEME.deep;
     document.getElementById('themeGold').value = theme.gold || DEFAULT_THEME.gold;
     document.getElementById('themeRoyal').value = theme.royal || DEFAULT_THEME.royal;
   }
+
   document.getElementById('themeSaveBtn').addEventListener('click', async ()=>{
     const theme = {
       deep: document.getElementById('themeDeep').value,
       gold: document.getElementById('themeGold').value,
       royal: document.getElementById('themeRoyal').value
     };
-    if(await saveJSON('site-theme', theme)) alert('تم حفظ الألوان. حدّث الموقع الرئيسي لترى التغيير.');
+    const ok = await saveJSON('site-theme', theme);
+    if(ok) alert('تم حفظ الألوان. حدّث الموقع الرئيسي لترى التغيير.');
   });
+
   document.getElementById('themeResetBtn').addEventListener('click', async ()=>{
     document.getElementById('themeDeep').value = DEFAULT_THEME.deep;
     document.getElementById('themeGold').value = DEFAULT_THEME.gold;
     document.getElementById('themeRoyal').value = DEFAULT_THEME.royal;
-    if(await saveJSON('site-theme', DEFAULT_THEME)) alert('تم استرجاع الألوان الافتراضية.');
+    const ok = await saveJSON('site-theme', DEFAULT_THEME);
+    if(ok) alert('تم استرجاع الألوان الافتراضية.');
   });
 
-  document.getElementById('exportBackupBtn').addEventListener('click', async ()=>{
-    await Promise.allSettled([loadNews(), loadEvents(), loadQuestions()]);
+  document.getElementById('exportBackupBtn').addEventListener('click', ()=>{
     const backup = {
       exportedAt: new Date().toISOString(),
-      news: siteNews, events: siteEvents, levels: siteLevels,
-      questions: siteQuestions.map(q=> Object.assign({}, q, { replies: siteReplies[q.id] || [] }))
+      news: siteNews, events: siteEvents, levels: siteLevels, questions: siteQuestions
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1063,6 +938,5 @@
     URL.revokeObjectURL(url);
   });
 </script>
-
 </body>
 </html>
