@@ -833,7 +833,7 @@
 
       listWrap.innerHTML = users.map(u=>{
         const name = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'بدون اسم';
-        const roleLabel = u.role === 'ولي' ? 'ولي تلميذ' : 'تلميذ';
+        const roleLabel = u.role === 'ولي' ? 'ولي تلميذ' : (u.role === 'إدارة' ? 'حساب الإدارة' : 'تلميذ');
         const extra = u.role === 'ولي'
           ? `${u.studentName ? 'الابن: ' + u.studentName : ''}${u.parentPhone ? ' · الهاتف: ' + u.parentPhone : ''}`
           : (u.studentName || '');
