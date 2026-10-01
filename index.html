@@ -89,7 +89,7 @@
 
   .admin-card{
     background:#fff; border:1px solid #ecdfc2; border-radius:18px; padding:22px;
-    box-shadow:0 6px 20px rgba(20,60,75,.06); margin-bottom:22px;
+    box-shadow:0 6px 20px rgba(20,60,75,.06); margin-bottom:22px; overflow-wrap:anywhere; word-break:break-word;
   }
   .admin-card h4{color:var(--deep); font-size:1rem; margin-bottom:16px;}
   .admin-field{margin-bottom:14px;}
@@ -769,8 +769,8 @@
       box.innerHTML = `
         <div style="display:flex; gap:12px; align-items:flex-start;">
           <div class="admin-list-thumb">${icon('message', 16)}</div>
-          <div style="flex:1;">
-            <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(q.body)}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:700; margin-bottom:4px; overflow-wrap:anywhere; word-break:break-word;">${escapeHtml(q.body)}</div>
             <div style="font-size:.78rem; color:#8a959a;">${escapeHtml(q.subj)} · ${escapeHtml(q.author)} · ${escapeHtml(q.time)} · ${(q.likes||[]).length} إعجاب</div>
             ${q.attachment ? `<img src="${q.attachment}" style="max-width:160px; border-radius:8px; margin-top:8px;">` : ''}
           </div>
