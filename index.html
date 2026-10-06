@@ -133,7 +133,7 @@
   .admin-level-tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;}
   .empty-note{color:#a2aeb2; font-size:.85rem; text-align:center; padding:20px 0;}
 </style>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 </head>
 <body>
 
@@ -299,10 +299,10 @@
     </div>
   </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDZ4hr_MISEoJs67DrPLYxqO0LfsSYPtXY",
@@ -325,6 +325,13 @@
 
   function isAdminUser(user){
     return !!(user && user.email && ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(user.email.toLowerCase()));
+  }
+  // يقبل فقط صور data:image بترميز base64 سليم أو روابط https — يمنع حقن الشيفرات عبر روابط الصور (XSS)
+  function safeImg(src){
+    src = String(src || '');
+    if(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(src)) return src;
+    if(/^https:\/\/[^\s"'<>`]+$/.test(src)) return escapeHtml(src);
+    return '';
   }
   function escapeHtml(s){
     return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -385,6 +392,9 @@
   }
   async function saveJSON(key, data){
     if(!db){ alert('تعذر الاتصال بقاعدة البيانات'); return false; }
+    const bytes = new Blob([JSON.stringify({items:data})]).size;
+    if(bytes > 1000000){ alert('تعذر الحفظ: حجم البيانات (' + Math.round(bytes/1024) + ' كيلوبايت) تجاوز حد Firestore (1 ميغابايت للمستند). احذف بعض الصور أو الأخبار القديمة ثم أعد المحاولة.'); return false; }
+    if(bytes > 800000) alert('تنبيه: حجم «' + key + '» وصل إلى ' + Math.round(bytes/1024) + ' كيلوبايت من أصل 1024. احذف صوراً أو أخباراً قديمة قريباً حتى لا يتوقف الحفظ.');
     try{ await db.collection('siteData').doc(key).set({items:data}); return true; }
     catch(e){ console.error('Firestore save failed for', key, e); alert('تعذر الحفظ — تحقق من اتصالك بالإنترنت أو من صلاحيات Firestore Rules'); return false; }
   }
@@ -393,7 +403,7 @@
     siteNews = await loadJSON('site-news', DEFAULT_NEWS);
     siteEvents = await loadJSON('site-events', DEFAULT_EVENTS);
     siteLevels = await loadJSON('site-levels', DEFAULT_LEVELS);
-    siteQuestions = await loadJSON('site-questions', DEFAULT_QUESTIONS);
+    siteQuestions = await loadQuestionsAdmin();
   }
 
   // ================= تسجيل دخول المدير =================
@@ -539,7 +549,7 @@
     const box = document.getElementById('newsGalleryPreview');
     box.innerHTML = pendingGallery.map((src, i)=> `
       <div style="position:relative;">
-        <img src="${src}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">
+        <img src="${safeImg(src)}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;">
         <button type="button" data-remove-gallery="${i}" style="position:absolute; top:-6px; left:-6px; width:20px; height:20px; border-radius:50%; background:var(--red); color:#fff; font-size:.7rem; line-height:1;">×</button>
       </div>`).join('');
     box.querySelectorAll('[data-remove-gallery]').forEach(b=> b.addEventListener('click', ()=>{
@@ -603,7 +613,7 @@
     if(!siteNews.length){ wrap.innerHTML = '<p class="empty-note">لا توجد أخبار بعد</p>'; return; }
     wrap.innerHTML = siteNews.map(n=> `
       <div class="admin-list-item">
-        <div class="admin-list-thumb">${n.image ? `<img src="${n.image}">` : icon(n.ic || 'newspaper', 18)}</div>
+        <div class="admin-list-thumb">${n.image ? `<img src="${safeImg(n.image)}">` : icon(n.ic || 'newspaper', 18)}</div>
         <div class="admin-list-info">
           <div class="t">${escapeHtml(n.title)}</div>
           <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}${n.gallery && n.gallery.length ? ' · ' + n.gallery.length + ' صور إضافية' : ''}</div>
@@ -622,7 +632,7 @@
       document.getElementById('newsDate').value = item.date;
       document.getElementById('newsCat').value = item.cat;
       document.getElementById('newsExcerpt').value = item.excerpt;
-      newsQuill.root.innerHTML = item.content || '';
+      newsQuill.setContents([]); newsQuill.clipboard.dangerouslyPasteHTML(0, item.content || '');
       document.getElementById('newsFormTitle').textContent = 'تعديل الخبر';
       document.getElementById('newsCancelEdit').style.display = 'inline-flex';
       const prev = document.getElementById('newsImgPreview');
@@ -751,6 +761,7 @@
         </div>
       </div>`).join('');
     wrap.querySelectorAll('[data-del-exam]').forEach(b=> b.addEventListener('click', async ()=>{
+      if(!confirm('هل تريد حذف هذا الفرض/الاختبار؟')) return;
       siteLevels[adminExamLevel].splice(Number(b.dataset.delExam), 1);
       await saveJSON('site-levels', siteLevels);
       renderAdminExamList();
@@ -758,10 +769,73 @@
   }
 
   // ================= إدارة الأسئلة =================
-  function renderAdminQAList(){
+  async function loadQuestionsAdmin(){
+    if(!db) return [];
+    try{
+      const snap = await db.collection('questions').orderBy('createdAt', 'desc').limit(300).get();
+      return snap.docs.map(d=>{
+        const x = d.data(); let t = '';
+        try{ if(x.createdAt && x.createdAt.toDate) t = x.createdAt.toDate().toLocaleDateString('ar-DZ'); }catch(e){}
+        return Object.assign({}, x, { id: d.id, time: t, likes: x.likes || [], answerLikes: x.answerLikes || [] });
+      });
+    }catch(e){ console.error('load questions failed', e); return []; }
+  }
+  async function deleteQuestionAdmin(qId){
+    const ref = db.collection('questions').doc(qId);
+    const reps = await ref.collection('replies').get();
+    const batch = db.batch();
+    reps.forEach(d=> batch.delete(d.ref));
+    batch.delete(ref);
+    await batch.commit();
+  }
+  // نقل الأسئلة من النظام القديم (siteData/site-questions) إلى المجموعة الجديدة questions
+  async function migrateLegacyQuestions(){
+    const legacy = await loadJSON('site-questions', []);
+    if(!Array.isArray(legacy) || !legacy.length){ alert('لا توجد أسئلة قديمة لنقلها.'); return; }
+    if(!confirm('سيتم نقل ' + legacy.length + ' سؤالاً مع ردودها إلى النظام الجديد. متابعة؟')) return;
+    const TS = firebase.firestore.Timestamp;
+    const base = Date.now();
+    let done = 0;
+    try{
+      for(let i = 0; i < legacy.length; i++){
+        const q = legacy[i] || {};
+        const cleanId = String(q.id || '').replace(/[^A-Za-z0-9_-]/g, '');
+        const ref = cleanId ? db.collection('questions').doc('legacy_' + cleanId) : db.collection('questions').doc();
+        const data = {
+          subj: String(q.subj || ''), body: String(q.body || '').slice(0, 1000), author: String(q.author || 'مستخدم'),
+          authorUid: String(q.authorUid || ''), authorPhoto: safeImg(q.authorPhoto) ? q.authorPhoto : null, isOwner: !!q.isOwner,
+          likes: Array.isArray(q.likes) ? q.likes : [], answerLikes: (q.answer && Array.isArray(q.answer.likes)) ? q.answer.likes : [],
+          attachment: safeImg(q.attachment) ? q.attachment : null, createdAt: TS.fromMillis(base - i * 60000)
+        };
+        if(q.answer && q.answer.text) data.answer = { text: String(q.answer.text), author: String(q.answer.author || 'الإدارة'), time: String(q.answer.time || '') };
+        await ref.set(data);
+        const reps = Array.isArray(q.replies) ? q.replies : [];
+        for(let j = 0; j < reps.length; j++){
+          const r = reps[j] || {};
+          await ref.collection('replies').doc('r' + j).set({
+            uid: String(r.uid || ''), author: String(r.author || 'مستخدم'), authorPhoto: safeImg(r.authorPhoto) ? r.authorPhoto : null,
+            isOwner: !!r.isOwner, text: String(r.text || '').slice(0, 500), likes: Array.isArray(r.likes) ? r.likes : [],
+            createdAt: TS.fromMillis(base - i * 60000 + (j + 1) * 1000)
+          });
+        }
+        done++;
+      }
+      alert('تم نقل ' + done + ' سؤالاً بنجاح. (النسخة القديمة بقيت محفوظة في siteData/site-questions ويمكنك حذفها من Firebase Console لاحقاً).');
+    }catch(e){ console.error(e); alert('توقف النقل بعد ' + done + ' سؤالاً بسبب خطأ. تأكد من نشر قواعد Firestore الجديدة ثم أعد المحاولة (النقل آمن للتكرار).'); }
+    renderAdminQAList(true);
+  }
+
+  async function renderAdminQAList(reload){
     const wrap = document.getElementById('qaAdminList');
-    if(!siteQuestions.length){ wrap.innerHTML = '<p class="empty-note">لا توجد أسئلة بعد</p>'; return; }
+    if(reload) siteQuestions = await loadQuestionsAdmin();
     wrap.innerHTML = '';
+    const tools = document.createElement('div');
+    tools.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;';
+    tools.innerHTML = '<button class="btn" type="button" data-qa-reload>تحديث القائمة</button><button class="btn" type="button" data-qa-migrate>نقل الأسئلة القديمة إلى النظام الجديد</button>';
+    tools.querySelector('[data-qa-reload]').addEventListener('click', ()=> renderAdminQAList(true));
+    tools.querySelector('[data-qa-migrate]').addEventListener('click', migrateLegacyQuestions);
+    wrap.appendChild(tools);
+    if(!siteQuestions.length){ wrap.insertAdjacentHTML('beforeend', '<p class="empty-note">لا توجد أسئلة بعد</p>'); return; }
     siteQuestions.forEach(q=>{
       const box = document.createElement('div');
       box.className = 'admin-card';
@@ -772,29 +846,30 @@
           <div style="flex:1; min-width:0;">
             <div style="font-weight:700; margin-bottom:4px; overflow-wrap:anywhere; word-break:break-word;">${escapeHtml(q.body)}</div>
             <div style="font-size:.78rem; color:#8a959a;">${escapeHtml(q.subj)} · ${escapeHtml(q.author)} · ${escapeHtml(q.time)} · ${(q.likes||[]).length} إعجاب</div>
-            ${q.attachment ? `<img src="${q.attachment}" style="max-width:160px; border-radius:8px; margin-top:8px;">` : ''}
+            ${q.attachment && safeImg(q.attachment) ? `<img src="${safeImg(q.attachment)}" style="max-width:160px; border-radius:8px; margin-top:8px;">` : ''}
           </div>
-          <button class="admin-mini-btn danger" data-del-q="${q.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
+          <button class="admin-mini-btn danger" data-del-q="${escapeHtml(q.id)}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
         </div>
         <div style="margin-top:10px; padding-top:10px; border-top:1px solid #f0e8d5;">
-          <textarea class="answerInput" placeholder="اكتب إجابة الإدارة/الأستاذ هنا..." style="width:100%; min-height:60px; border:1px solid #e4d9bd; border-radius:10px; padding:10px; font-family:'IBM Plex Sans Arabic',sans-serif; font-size:.88rem;">${q.answer ? escapeHtml(q.answer.text) : ''}</textarea>
+          <textarea class="answerInput" maxlength="3000" placeholder="اكتب إجابة الإدارة/الأستاذ هنا..." style="width:100%; min-height:60px; border:1px solid #e4d9bd; border-radius:10px; padding:10px; font-family:'IBM Plex Sans Arabic',sans-serif; font-size:.88rem;">${q.answer ? escapeHtml(q.answer.text) : ''}</textarea>
           <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
             <button class="btn gold answerSaveBtn">${q.answer ? 'تحديث الإجابة' : 'حفظ الإجابة'}</button>
-            ${q.answer ? `<span style="font-size:.78rem; color:#8a959a;">${(q.answer.likes||[]).length} إعجاب على الإجابة</span>` : ''}
+            ${q.answer ? `<span style="font-size:.78rem; color:#8a959a;">${(q.answerLikes||[]).length} إعجاب على الإجابة</span>` : ''}
           </div>
         </div>`;
       box.querySelector('.answerSaveBtn').addEventListener('click', async ()=>{
         const text = box.querySelector('.answerInput').value.trim();
         if(!text) return;
-        q.answer = { text, author: 'الإدارة', time: new Date().toLocaleDateString('ar-DZ'), likes: (q.answer && q.answer.likes) || [] };
-        await saveJSON('site-questions', siteQuestions);
-        renderAdminQAList();
+        try{
+          // تحديث حقل الإجابة فقط — لا تتم إعادة كتابة باقي الأسئلة (لا فقدان للبيانات)
+          await db.collection('questions').doc(q.id).update({ answer: { text, author: 'الإدارة', time: new Date().toLocaleDateString('ar-DZ') } });
+        }catch(e){ console.error(e); alert('تعذر حفظ الإجابة.'); }
+        renderAdminQAList(true);
       });
       box.querySelector('[data-del-q]').addEventListener('click', async ()=>{
-        if(!confirm('هل تريد حذف هذا السؤال؟')) return;
-        siteQuestions = siteQuestions.filter(x=> x.id !== q.id);
-        await saveJSON('site-questions', siteQuestions);
-        renderAdminQAList();
+        if(!confirm('هل تريد حذف هذا السؤال مع كل ردوده؟')) return;
+        try{ await deleteQuestionAdmin(q.id); }catch(e){ console.error(e); alert('تعذر حذف السؤال.'); }
+        renderAdminQAList(true);
       });
       wrap.appendChild(box);
     });
@@ -807,9 +882,11 @@
     if(!db){ listWrap.innerHTML = '<p class="empty-note">تعذر الاتصال بقاعدة البيانات</p>'; return; }
     listWrap.innerHTML = 'جاري التحميل...';
     try{
-      const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
+      const snap = await db.collection('users').get();
       const users = [];
       snap.forEach(doc=> users.push(doc.data()));
+      const ms = u=>{ try{ return u.createdAt && u.createdAt.toMillis ? u.createdAt.toMillis() : 0; }catch(e){ return 0; } };
+      users.sort((a,b)=> ms(b) - ms(a));
 
       const total = users.length;
       const students = users.filter(u=> u.role === 'تلميذ').length;
@@ -873,7 +950,7 @@
           <div class="admin-list-info">
             <div class="t">${escapeHtml(m.author||'ولي')}</div>
             <div class="s">${m.text ? escapeHtml(m.text) : '(صورة)'} ${dateStr ? '· ' + dateStr : ''}</div>
-            ${m.image ? `<img src="${m.image}" style="max-width:140px; border-radius:8px; margin-top:6px;">` : ''}
+            ${m.image ? `<img src="${safeImg(m.image)}" style="max-width:140px; border-radius:8px; margin-top:6px;">` : ''}
           </div>
           <div class="admin-list-actions">
             <button class="admin-mini-btn danger" data-del-msg="${doc.id}" title="حذف"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg></button>
@@ -924,10 +1001,19 @@
     if(ok) alert('تم استرجاع الألوان الافتراضية.');
   });
 
-  document.getElementById('exportBackupBtn').addEventListener('click', ()=>{
+  document.getElementById('exportBackupBtn').addEventListener('click', async ()=>{
+    const grab = async (fn)=>{ try{ return await fn(); }catch(e){ console.error('backup part failed', e); return null; } };
+    const docs = snap=> snap.docs.map(d=> Object.assign({ _id: d.id, _path: d.ref.path }, d.data()));
+    const questions = await grab(async()=> docs(await db.collection('questions').get()));
+    const replies = await grab(async()=> docs(await db.collectionGroup('replies').get()));
+    const comments = await grab(async()=> docs(await db.collectionGroup('comments').get()));
+    const users = await grab(async()=> docs(await db.collection('users').get()));
+    const chat = await grab(async()=> docs(await db.collection('parentsGeneralChat').get()));
+    const theme = await grab(()=> loadJSON('site-theme', null));
     const backup = {
       exportedAt: new Date().toISOString(),
-      news: siteNews, events: siteEvents, levels: siteLevels, questions: siteQuestions
+      news: siteNews, events: siteEvents, levels: siteLevels, theme,
+      questions, questionReplies: replies, newsComments: comments, users, parentsChat: chat
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
