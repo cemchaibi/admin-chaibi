@@ -213,6 +213,7 @@
             <div class="admin-field"><label>عنوان المناسبة</label><input type="text" id="eventTitle" placeholder="مثال: احتفالية عيد العلم"></div>
             <div class="admin-field"><label>التاريخ</label><input type="text" id="eventDate" placeholder="مثال: 16 أفريل 2027"></div>
           </div>
+          <div class="admin-field"><label>التاريخ الفعلي (لترتيب المناسبات واختيار «أقرب مناسبة» تلقائياً)</label><input type="date" id="eventIso"></div>
           <div class="admin-field"><label>وصف مختصر</label><textarea id="eventDesc" placeholder="تفاصيل عن المناسبة..."></textarea></div>
           <div style="display:flex; gap:10px;">
             <button class="btn gold" id="eventSaveBtn">حفظ المناسبة</button>
@@ -381,6 +382,13 @@
 
   let siteNews = [], siteEvents = [], siteLevels = {}, siteQuestions = [];
 
+  function toast(msg){
+    const d = document.createElement('div');
+    d.textContent = msg;
+    d.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0e3b4c;color:#fff;padding:11px 22px;border-radius:999px;font-size:.88rem;z-index:5000;box-shadow:0 10px 30px rgba(0,0,0,.25);';
+    document.body.appendChild(d);
+    setTimeout(()=> d.remove(), 2600);
+  }
   function genId(){ return 'id' + Date.now() + Math.floor(Math.random()*1000); }
   async function loadJSON(key, fallback){
     if(!db){ return JSON.parse(JSON.stringify(fallback)); }
@@ -416,7 +424,10 @@
     adminErrorBox.style.display = 'block';
   }
 
+  let adminShellStarted = false;
   async function showAdminShell(){
+    if(adminShellStarted) return;
+    adminShellStarted = true;
     adminLoginWrap.style.display = 'none';
     adminShell.classList.add('open');
     await initAdminData();
@@ -505,7 +516,7 @@
           const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
           resolve(canvas.toDataURL('image/jpeg', quality));
         };
         img.onerror = reject;
@@ -603,9 +614,11 @@
     } else {
       siteNews.unshift({id:genId(), date, title, excerpt, content: content || '', cat, ic:'newspaper', image: pendingNewsImage, gallery: pendingGallery.slice()});
     }
-    await saveJSON('site-news', siteNews);
+    const okNews = await saveJSON('site-news', siteNews);
+    if(!okNews){ siteNews = await loadJSON('site-news', DEFAULT_NEWS); renderAdminNewsList(); return; }
     renderAdminNewsList();
     resetNewsForm();
+    toast('تم حفظ الخبر.');
   });
 
   function renderAdminNewsList(){
@@ -656,6 +669,7 @@
     document.getElementById('eventTitle').value = '';
     document.getElementById('eventDate').value = '';
     document.getElementById('eventDesc').value = '';
+    document.getElementById('eventIso').value = '';
     document.getElementById('eventFormTitle').textContent = 'إضافة مناسبة جديدة';
     document.getElementById('eventCancelEdit').style.display = 'none';
   }
@@ -663,20 +677,24 @@
 
   document.getElementById('eventSaveBtn').addEventListener('click', async ()=>{
     const title = document.getElementById('eventTitle').value.trim();
-    const date = document.getElementById('eventDate').value.trim();
+    const iso = document.getElementById('eventIso').value || null;
+    let date = document.getElementById('eventDate').value.trim();
+    if(!date && iso){ date = new Date(iso + 'T12:00:00').toLocaleDateString('ar-DZ', { day:'2-digit', month:'long', year:'numeric' }); }
     const desc = document.getElementById('eventDesc').value.trim();
     if(!title || !date){ alert('يرجى تعبئة العنوان والتاريخ على الأقل'); return; }
     const editId = document.getElementById('eventEditId').value;
 
     if(editId){
       const item = siteEvents.find(ev=> ev.id === editId);
-      if(item){ item.title = title; item.date = date; item.desc = desc; }
+      if(item){ item.title = title; item.date = date; item.desc = desc; item.iso = iso; }
     } else {
-      siteEvents.push({id:genId(), date, title, desc, ic:'calendarStar'});
+      siteEvents.push({id:genId(), date, title, desc, iso, ic:'calendarStar'});
     }
-    await saveJSON('site-events', siteEvents);
+    const okEv = await saveJSON('site-events', siteEvents);
+    if(!okEv){ siteEvents = await loadJSON('site-events', DEFAULT_EVENTS); renderAdminEventsList(); return; }
     renderAdminEventsList();
     resetEventForm();
+    toast('تم حفظ المناسبة.');
   });
 
   function renderAdminEventsList(){
@@ -702,6 +720,7 @@
       document.getElementById('eventTitle').value = item.title;
       document.getElementById('eventDate').value = item.date;
       document.getElementById('eventDesc').value = item.desc;
+      document.getElementById('eventIso').value = item.iso || '';
       document.getElementById('eventFormTitle').textContent = 'تعديل المناسبة';
       document.getElementById('eventCancelEdit').style.display = 'inline-flex';
       window.scrollTo({top:0, behavior:'smooth'});
@@ -738,8 +757,10 @@
     if(!subj || !date || !time){ alert('يرجى تعبئة كل الحقول'); return; }
     if(!siteLevels[adminExamLevel]) siteLevels[adminExamLevel] = [];
     siteLevels[adminExamLevel].push({subj, type, date, time});
-    await saveJSON('site-levels', siteLevels);
+    const okEx = await saveJSON('site-levels', siteLevels);
+    if(!okEx){ siteLevels = await loadJSON('site-levels', DEFAULT_LEVELS); renderAdminExamList(); return; }
     renderAdminExamList();
+    toast('تمت الإضافة إلى الجدول.');
     document.getElementById('examSubj').value = '';
     document.getElementById('examDate').value = '';
     document.getElementById('examTime').value = '';
@@ -923,8 +944,7 @@
             <div class="s">${escapeHtml(u.email || '')}${extra ? ' · ' + escapeHtml(extra) : ''}${dateStr ? ' · انضم في ' + dateStr : ''}</div>
           </div>
         </div>`;
-      }).join('');
-    }catch(e){
+      }).join('');    }catch(e){
       console.error(e);
       listWrap.innerHTML = '<p class="empty-note">حدث خطأ أثناء تحميل قائمة المستخدمين. تأكد من تفعيل قواعد الحماية (Security Rules) بشكل صحيح.</p>';
     }
