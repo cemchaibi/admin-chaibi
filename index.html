@@ -132,6 +132,38 @@
 
   .admin-level-tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;}
   .empty-note{color:#a2aeb2; font-size:.85rem; text-align:center; padding:20px 0;}
+
+  /* ===== الإصدار 3: أدوات جدول الحصص والوسائط ===== */
+  .chk-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chk-row label{ display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border:1px solid #e4d9bd; border-radius:999px; cursor:pointer; font-size:.85rem; background:#fff; }
+  .chk-row label:has(input:checked){ background:#0e3b4c; color:#fff; border-color:#0e3b4c; }
+  .slot-row{ display:grid; grid-template-columns:1.2fr 1.4fr auto auto auto; gap:8px; margin-bottom:8px; align-items:center; }
+  .slot-row input{ width:100%; }
+  .tt-adm-wrap{ overflow-x:auto; border:1px solid #e4d9bd; border-radius:14px; background:#fff; }
+  table.tt-adm{ width:100%; min-width:680px; border-collapse:collapse; }
+  .tt-adm th, .tt-adm td{ border:1px solid #efe5c8; padding:6px; text-align:center; font-size:.78rem; vertical-align:top; }
+  .tt-adm thead th{ background:#0e3b4c; color:#fff; }
+  .tt-adm tbody th{ background:#f6f0de; white-space:nowrap; font-size:.74rem; }
+  .tt-adm td.cell{ cursor:pointer; min-width:96px; height:52px; transition:background .15s; }
+  .tt-adm td.cell:hover{ background:#eaf2fa; }
+  .tt-adm td.cell.sel{ outline:3px solid #c99a2e; outline-offset:-3px; background:#fff8e3; }
+  .tt-adm tr.brk td, .tt-adm tr.brk th{ background:#f1f1f1; color:#8a959a; }
+  .tt-adm .mini{ display:block; padding:2px 6px; margin:1px 0; border-radius:6px; background:#e7f0f8; font-size:.72rem; }
+  .tt-adm .mini i{ font-style:normal; color:#a8402f; font-size:.66rem; }
+  .cell-editor{ margin-top:14px; padding:14px; border:1px dashed #c99a2e; border-radius:14px; background:#fffcf2; }
+  .cell-editor h5{ font-size:.95rem; margin-bottom:10px; color:#0e3b4c; }
+  .sess-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; background:#fff; border:1px solid #efe5c8; margin-bottom:6px; font-size:.84rem; }
+  .sess-row b{ flex:1; }
+  .admin-grid-4{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .detect-line{ display:flex; align-items:center; gap:10px; font-size:.82rem; margin:-4px 0 12px; min-height:34px; }
+  .detect-line img{ height:34px; border-radius:6px; }
+  .pill-p{ padding:2px 12px; border-radius:999px; background:#0e3b4c; color:#fff; font-size:.74rem; }
+  @media (max-width:700px){ .admin-grid-4{ grid-template-columns:1fr 1fr; } .slot-row{ grid-template-columns:1fr 1fr; } }
+
+  .chk-row input{ width:auto !important; flex:none; margin:0; }
+  .chk-row label{ white-space:nowrap; flex:none; }
+  .slot-row .s-t{ direction:ltr; text-align:center; }
+  .admin-list-actions .admin-mini-btn{ white-space:nowrap; width:auto; min-width:34px; padding:0 10px; }
 </style>
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 </head>
@@ -160,17 +192,23 @@
     </div>
     <div class="admin-body">
       <div class="admin-tabs" id="adminTabs">
-        <button class="admin-tab-btn active" data-tab="news">إدارة الأخبار</button>
-        <button class="admin-tab-btn" data-tab="events">إدارة المناسبات</button>
+        <button class="admin-tab-btn active" data-tab="news">الأخبار والمناسبات</button>
+        <button class="admin-tab-btn" data-tab="timetable">جدول الحصص</button>
         <button class="admin-tab-btn" data-tab="exams">الفروض والاختبارات</button>
+        <button class="admin-tab-btn" data-tab="media">الوسائط (يوتيوب/انستغرام/فيسبوك)</button>
         <button class="admin-tab-btn" data-tab="qa">فضاء الأسئلة</button>
         <button class="admin-tab-btn" data-tab="users">المستخدمون والإحصائيات</button>
         <button class="admin-tab-btn" data-tab="parentmsgs">دردشة الأولياء العامة</button>
         <button class="admin-tab-btn" data-tab="settings">إعدادات ومظهر الموقع</button>
       </div>
 
-      <!-- NEWS TAB -->
+      <!-- NEWS + EVENTS TAB (مدمجة) -->
       <div class="admin-panel-section active" id="tabNews">
+        <div class="admin-level-tabs" id="feedSwitch" style="margin-bottom:16px;">
+          <button class="admin-tab-btn level-tab-btn active" data-sub="news" type="button">الأخبار</button>
+          <button class="admin-tab-btn level-tab-btn" data-sub="events" type="button">المناسبات</button>
+        </div>
+        <div id="feedNewsPane">
         <div class="admin-card">
           <h4 id="newsFormTitle">إضافة خبر جديد</h4>
           <input type="hidden" id="newsEditId">
@@ -202,10 +240,8 @@
           </div>
         </div>
         <div id="newsAdminList"></div>
-      </div>
-
-      <!-- EVENTS TAB -->
-      <div class="admin-panel-section" id="tabEvents">
+        </div>
+        <div id="feedEventsPane" style="display:none;">
         <div class="admin-card">
           <h4 id="eventFormTitle">إضافة مناسبة جديدة</h4>
           <input type="hidden" id="eventEditId">
@@ -221,6 +257,7 @@
           </div>
         </div>
         <div id="eventsAdminList"></div>
+        </div>
       </div>
 
       <!-- EXAMS TAB -->
@@ -242,6 +279,64 @@
           <button class="btn gold" id="examSaveBtn">إضافة إلى الجدول</button>
         </div>
         <div id="examAdminList"></div>
+      </div>
+
+      <!-- TIMETABLE TAB -->
+      <div class="admin-panel-section" id="tabTimetable">
+        <div class="admin-card">
+          <h4>1) الأيام والتوقيتات (تُطبَّق على كل الأقسام)</h4>
+          <div class="admin-field"><label>أيام الدراسة</label><div class="chk-row" id="ttDaysChecks"></div></div>
+          <div class="admin-field">
+            <label>الحصص — اكتب التوقيت بصيغة 08:00 - 09:00، وإن كانت فاصلاً (استراحة) اكتب اسمه في الخانة الثانية</label>
+            <div id="ttSlotsEditor"></div>
+            <button class="btn" id="ttAddSlot" type="button" style="margin-top:6px;">+ إضافة حصة</button>
+          </div>
+          <button class="btn gold" id="ttSaveStruct" type="button">حفظ الأيام والتوقيتات</button>
+        </div>
+
+        <div class="admin-card">
+          <h4>2) الأقسام</h4>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>المستوى</label>
+              <select id="ttClsLevel"><option>الأولى متوسط</option><option>الثانية متوسط</option><option>الثالثة متوسط</option><option>الرابعة متوسط</option></select></div>
+            <div class="admin-field"><label>اسم القسم</label><input type="text" id="ttClsName" placeholder="مثال: 1م1"></div>
+          </div>
+          <div class="admin-field"><label>الأفواج (اختياري — افصل بينها بفاصلة)</label><input type="text" id="ttClsGroups" placeholder="الفوج 1، الفوج 2"></div>
+          <button class="btn gold" id="ttAddClass" type="button">إضافة القسم</button>
+          <div id="ttClassList" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="admin-card" id="ttEditorCard" style="display:none;">
+          <h4 id="ttEditorTitle">تحرير جدول القسم</h4>
+          <p style="font-size:.8rem;color:#7c8b91;margin-bottom:10px;">اضغط على أي خانة لإضافة حصة أو تعديلها. التغييرات تُحفظ تلقائياً.</p>
+          <div class="tt-adm-wrap"><table class="tt-adm" id="ttAdminGrid"></table></div>
+          <div class="cell-editor" id="ttCellEditor" style="display:none;"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;">
+            <select id="ttCopyTo" style="min-width:160px;"></select>
+            <button class="btn" id="ttCopyBtn" type="button">نسخ هذا الجدول إلى القسم المحدد</button>
+            <button class="btn" id="ttClearBtn" type="button" style="background:#a8402f;">مسح كل حصص هذا القسم</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDIA TAB -->
+      <div class="admin-panel-section" id="tabMedia">
+        <div class="admin-card">
+          <h4 id="mediaFormTitle">إضافة فيديو / منشور</h4>
+          <input type="hidden" id="mediaEditId">
+          <div class="admin-field"><label>رابط المنشور (يوتيوب أو انستغرام أو فيسبوك)</label><input type="url" id="mediaUrl" placeholder="https://www.youtube.com/watch?v=..." dir="ltr"></div>
+          <div class="detect-line" id="mediaDetect"></div>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>العنوان</label><input type="text" id="mediaTitle" placeholder="مثال: حفل تكريم المتفوقين"></div>
+            <div class="admin-field"><label>التاريخ (نص حر)</label><input type="text" id="mediaDate" placeholder="مثال: 12 جوان 2026"></div>
+          </div>
+          <div class="admin-field"><label>وصف مختصر (اختياري)</label><textarea id="mediaDesc"></textarea></div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn gold" id="mediaSaveBtn" type="button">حفظ</button>
+            <button class="btn" id="mediaCancelBtn" type="button" style="display:none;background:#c7ceD1;">إلغاء التعديل</button>
+          </div>
+        </div>
+        <div id="mediaAdminList"></div>
       </div>
 
       <!-- QA TAB -->
@@ -268,6 +363,19 @@
 
       <!-- SETTINGS / THEME TAB -->
       <div class="admin-panel-section" id="tabSettings">
+        <div class="admin-card">
+          <h4>معلومات المتوسطة (صفحة «عن المتوسطة»)</h4>
+          <div class="admin-field"><label>نبذة عن المتوسطة</label><textarea id="infoAbout" placeholder="اتركه فارغاً لاستعمال النص الافتراضي"></textarea></div>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>رقم الهاتف</label><input type="text" id="infoPhone" placeholder="0550 00 00 00" dir="ltr"></div>
+            <div class="admin-field"><label>البريد الإلكتروني للتواصل</label><input type="email" id="infoEmail" placeholder="cemchaibi@gmail.com" dir="ltr"></div>
+          </div>
+          <div class="admin-field"><label>العنوان</label><input type="text" id="infoAddress" placeholder="الحي، المدينة"></div>
+          <div class="admin-field"><label>أوقات العمل</label><textarea id="infoHours" placeholder="الأحد – الخميس: 08:00 – 16:00"></textarea></div>
+          <div class="admin-field"><label>عبارة البحث على خريطة Google (لعرض الموقع)</label><input type="text" id="infoMap" placeholder="متوسطة شعيبي بومدين وهران"></div>
+          <button class="btn gold" id="infoSaveBtn" type="button">حفظ المعلومات</button>
+        </div>
+
         <div class="admin-card">
           <h4>ألوان الموقع</h4>
           <p style="font-size:.82rem; color:#7c8b91; margin-bottom:14px;">غيّر ألوان الموقع الرئيسية دون الحاجة لتعديل أي كود. التغيير يظهر لكل الزوار فور الحفظ.</p>
@@ -407,11 +515,282 @@
     catch(e){ console.error('Firestore save failed for', key, e); alert('تعذر الحفظ — تحقق من اتصالك بالإنترنت أو من صلاحيات Firestore Rules'); return false; }
   }
 
+
+  // =====================================================================
+  //  الإصدار 3: دمج الأخبار/المناسبات + جدول الحصص + الوسائط + معلومات الموقع
+  // =====================================================================
+  document.querySelectorAll('#feedSwitch [data-sub]').forEach(b=> b.addEventListener('click', ()=>{
+    document.querySelectorAll('#feedSwitch [data-sub]').forEach(x=> x.classList.toggle('active', x === b));
+    document.getElementById('feedNewsPane').style.display = b.dataset.sub === 'news' ? '' : 'none';
+    document.getElementById('feedEventsPane').style.display = b.dataset.sub === 'events' ? '' : 'none';
+  }));
+
+  // ---------- جدول الحصص ----------
+  const ALL_DAYS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const TT_DEFAULT_SLOTS = [
+    {id:'s1', t:'08:00 - 09:00'}, {id:'s2', t:'09:00 - 10:00'}, {id:'s3', t:'10:00 - 10:15', brk:'استراحة'},
+    {id:'s4', t:'10:15 - 11:15'}, {id:'s5', t:'11:15 - 12:15'}, {id:'s6', t:'12:15 - 13:30', brk:'استراحة الغداء'},
+    {id:'s7', t:'13:30 - 14:30'}, {id:'s8', t:'14:30 - 15:30'}
+  ];
+  const SUBJECT_SUGGEST = ['رياضيات','لغة عربية','لغة فرنسية','لغة إنجليزية','علوم طبيعية','فيزياء','تاريخ وجغرافيا','تربية إسلامية','تربية مدنية','تربية تشكيلية','تربية موسيقية','تربية بدنية','إعلام آلي','أمازيغية'];
+  let siteTT = {}, siteMedia = [], siteInfo = {};
+  let ttSelCls = '', ttSelCell = null;
+  function ttNorm(){
+    if(!siteTT || typeof siteTT !== 'object' || Array.isArray(siteTT)) siteTT = {};
+    if(!siteTT.days || !siteTT.days.length) siteTT.days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+    if(!siteTT.slots || !siteTT.slots.length) siteTT.slots = JSON.parse(JSON.stringify(TT_DEFAULT_SLOTS));
+    if(!siteTT.classes) siteTT.classes = [];
+  }
+  async function saveTT(msg){
+    const ok = await saveJSON('site-timetable', siteTT);
+    if(ok && msg) toast(msg);
+    return ok;
+  }
+  function renderTTStruct(){
+    ttNorm();
+    document.getElementById('ttDaysChecks').innerHTML = ALL_DAYS.map(d=> `<label><input type="checkbox" value="${d}" ${siteTT.days.includes(d) ? 'checked' : ''}> ${d}</label>`).join('');
+    drawSlotRows(siteTT.slots);
+  }
+  function drawSlotRows(slots){
+    const box = document.getElementById('ttSlotsEditor');
+    box.innerHTML = slots.map((s, i)=> `<div class="slot-row" data-id="${escapeHtml(s.id)}">
+      <input type="text" class="s-t" value="${escapeHtml(s.t)}" placeholder="08:00 - 09:00" dir="ltr">
+      <input type="text" class="s-b" value="${escapeHtml(s.brk || '')}" placeholder="اسم الفاصل إن وُجد (استراحة)">
+      <button class="admin-mini-btn" data-up="${i}" title="أعلى" type="button">▲</button>
+      <button class="admin-mini-btn" data-down="${i}" title="أسفل" type="button">▼</button>
+      <button class="admin-mini-btn danger" data-rm="${i}" title="حذف" type="button">✕</button></div>`).join('');
+    const read = ()=> [...box.querySelectorAll('.slot-row')].map(r=> ({ id: r.dataset.id, t: r.querySelector('.s-t').value.trim(), brk: r.querySelector('.s-b').value.trim() || undefined }));
+    box.querySelectorAll('[data-up]').forEach(b=> b.onclick = ()=>{ const a = read(), i = +b.dataset.up; if(i > 0){ [a[i-1], a[i]] = [a[i], a[i-1]]; drawSlotRows(a); } });
+    box.querySelectorAll('[data-down]').forEach(b=> b.onclick = ()=>{ const a = read(), i = +b.dataset.down; if(i < a.length - 1){ [a[i+1], a[i]] = [a[i], a[i+1]]; drawSlotRows(a); } });
+    box.querySelectorAll('[data-rm]').forEach(b=> b.onclick = ()=>{ const a = read(); a.splice(+b.dataset.rm, 1); drawSlotRows(a); });
+    box._read = read;
+  }
+  document.getElementById('ttAddSlot').addEventListener('click', ()=>{
+    const box = document.getElementById('ttSlotsEditor');
+    const cur = box._read ? box._read() : siteTT.slots.slice();
+    cur.push({ id: 's' + Date.now().toString(36), t: '' });
+    drawSlotRows(cur);
+  });
+  document.getElementById('ttSaveStruct').addEventListener('click', async ()=>{
+    const days = [...document.querySelectorAll('#ttDaysChecks input:checked')].map(i=> i.value);
+    const slots = document.getElementById('ttSlotsEditor')._read().filter(s=> s.t || s.brk);
+    if(!days.length || !slots.length){ alert('اختر يوماً واحداً وحصة واحدة على الأقل.'); return; }
+    if(slots.some(s=> !s.brk && !/^\s*\d{1,2}\s*[:hH.]\s*\d{2}\s*[-–—]\s*\d{1,2}\s*[:hH.]\s*\d{2}\s*$/.test(s.t))){
+      if(!confirm('بعض التوقيتات ليست بصيغة 08:00 - 09:00، وقد لا تعمل ميزة «الحصة الحالية» معها. المتابعة؟')) return;
+    }
+    ttNorm(); siteTT.days = days; siteTT.slots = slots;
+    await saveTT('تم حفظ الأيام والتوقيتات.');
+    renderTTStruct(); renderTTGrid();
+  });
+  document.getElementById('ttAddClass').addEventListener('click', async ()=>{
+    ttNorm();
+    const level = document.getElementById('ttClsLevel').value;
+    const name = document.getElementById('ttClsName').value.trim();
+    const groups = document.getElementById('ttClsGroups').value.split(/[,،]/).map(s=> s.trim()).filter(Boolean);
+    if(!name){ alert('اكتب اسم القسم.'); return; }
+    if(siteTT.classes.some(c=> c.level === level && c.name === name)){ alert('هذا القسم موجود مسبقاً.'); return; }
+    const c = { id: genId(), level, name, groups, cells: {} };
+    siteTT.classes.push(c);
+    if(!(await saveTT('تمت إضافة القسم.'))){ siteTT.classes.pop(); return; }
+    document.getElementById('ttClsName').value = ''; document.getElementById('ttClsGroups').value = '';
+    ttSelCls = c.id; ttSelCell = null; renderTTClasses(); renderTTGrid();
+  });
+  function renderTTClasses(){
+    ttNorm();
+    const box = document.getElementById('ttClassList');
+    if(!siteTT.classes.length){ box.innerHTML = '<p class="empty-note">لا توجد أقسام بعد</p>'; document.getElementById('ttEditorCard').style.display = 'none'; return; }
+    box.innerHTML = siteTT.classes.map(c=> `<div class="admin-list-item" style="${c.id === ttSelCls ? 'border-color:#c99a2e;background:#fffaf0;' : ''}">
+      <div class="admin-list-info"><div class="t">${escapeHtml(c.name)} <span class="pill-p">${escapeHtml(c.level)}</span></div><div class="s">${c.groups && c.groups.length ? 'الأفواج: ' + escapeHtml(c.groups.join('، ')) : 'بدون أفواج'} · ${Object.values(c.cells || {}).reduce((n, a)=> n + (a ? a.length : 0), 0)} حصة</div></div>
+      <div class="admin-list-actions">
+        <button class="btn gold" data-edit-cls="${c.id}" type="button" style="padding:6px 14px;font-size:.78rem;">تحرير الجدول</button>
+        <button class="admin-mini-btn" data-groups-cls="${c.id}" title="تعديل الأفواج" type="button">أفواج</button>
+        <button class="admin-mini-btn danger" data-del-cls="${c.id}" title="حذف" type="button">✕</button>
+      </div></div>`).join('');
+    box.querySelectorAll('[data-edit-cls]').forEach(b=> b.onclick = ()=>{ ttSelCls = b.dataset.editCls; ttSelCell = null; renderTTClasses(); renderTTGrid(); document.getElementById('ttEditorCard').scrollIntoView({ behavior:'smooth' }); });
+    box.querySelectorAll('[data-groups-cls]').forEach(b=> b.onclick = async ()=>{
+      const c = siteTT.classes.find(x=> x.id === b.dataset.groupsCls);
+      const v = prompt('الأفواج (افصل بينها بفاصلة، واتركها فارغة لإلغاء الأفواج):', (c.groups || []).join('، '));
+      if(v === null) return;
+      c.groups = v.split(/[,،]/).map(s=> s.trim()).filter(Boolean);
+      await saveTT('تم تحديث الأفواج.'); renderTTClasses(); renderTTGrid();
+    });
+    box.querySelectorAll('[data-del-cls]').forEach(b=> b.onclick = async ()=>{
+      if(!confirm('حذف هذا القسم وكل حصصه؟')) return;
+      siteTT.classes = siteTT.classes.filter(x=> x.id !== b.dataset.delCls);
+      if(ttSelCls === b.dataset.delCls){ ttSelCls = ''; ttSelCell = null; }
+      await saveTT('تم حذف القسم.'); renderTTClasses(); renderTTGrid();
+    });
+  }
+  function curClass(){ return (siteTT.classes || []).find(c=> c.id === ttSelCls); }
+  function renderTTGrid(){
+    ttNorm();
+    const card = document.getElementById('ttEditorCard'), c = curClass();
+    if(!c){ card.style.display = 'none'; return; }
+    card.style.display = '';
+    document.getElementById('ttEditorTitle').textContent = 'جدول القسم: ' + c.name + ' — ' + c.level;
+    let h = '<thead><tr><th>الوقت</th>' + siteTT.days.map(d=> `<th>${d}</th>`).join('') + '</tr></thead><tbody>';
+    siteTT.slots.forEach(s=>{
+      if(s.brk){ h += `<tr class="brk"><th>${escapeHtml(s.t)}</th><td colspan="${siteTT.days.length}">${escapeHtml(s.brk)}</td></tr>`; return; }
+      h += `<tr><th>${escapeHtml(s.t)}</th>` + siteTT.days.map(d=>{
+        const arr = (c.cells || {})[d + '|' + s.id] || [];
+        const sel = ttSelCell && ttSelCell.day === d && ttSelCell.slot === s.id;
+        return `<td class="cell ${sel ? 'sel' : ''}" data-day="${d}" data-slot="${escapeHtml(s.id)}">${arr.map(x=> `<span class="mini">${escapeHtml(x.subj)}${x.group ? ' <i>' + escapeHtml(x.group) + '</i>' : ''}</span>`).join('')}</td>`;
+      }).join('') + '</tr>';
+    });
+    document.getElementById('ttAdminGrid').innerHTML = h + '</tbody>';
+    document.querySelectorAll('#ttAdminGrid td.cell').forEach(td=> td.onclick = ()=>{ ttSelCell = { day: td.dataset.day, slot: td.dataset.slot }; renderTTGrid(); renderCellEditor(); });
+    const sel = document.getElementById('ttCopyTo');
+    sel.innerHTML = '<option value="">— اختر القسم المستهدف —</option>' + siteTT.classes.filter(x=> x.id !== c.id).map(x=> `<option value="${x.id}">${escapeHtml(x.name)} — ${escapeHtml(x.level)}</option>`).join('');
+    renderCellEditor();
+  }
+  function renderCellEditor(){
+    const box = document.getElementById('ttCellEditor'), c = curClass();
+    if(!ttSelCell || !c){ box.style.display = 'none'; return; }
+    const slot = siteTT.slots.find(s=> s.id === ttSelCell.slot);
+    if(!slot){ box.style.display = 'none'; return; }
+    const key = ttSelCell.day + '|' + ttSelCell.slot;
+    const arr = (c.cells && c.cells[key]) || [];
+    box.style.display = '';
+    box.innerHTML = `<h5>${ttSelCell.day} — ${escapeHtml(slot.t)}</h5>
+      ${arr.map((x, i)=> `<div class="sess-row"><b>${escapeHtml(x.subj)}</b><span>${escapeHtml(x.teacher || '')}</span><span>${escapeHtml(x.room || '')}</span><span class="pill-p">${escapeHtml(x.group || 'كل القسم')}</span><button class="admin-mini-btn danger" data-rm-sess="${i}" type="button">✕</button></div>`).join('') || '<p style="font-size:.82rem;color:#7c8b91;margin-bottom:10px;">لا توجد حصص في هذه الخانة.</p>'}
+      <div class="admin-grid-4" style="margin-top:10px;">
+        <div class="admin-field"><label>المادة</label><input type="text" id="csSubj" list="subjList" placeholder="رياضيات"><datalist id="subjList">${SUBJECT_SUGGEST.map(s=> `<option value="${s}">`).join('')}</datalist></div>
+        <div class="admin-field"><label>الأستاذ(ة)</label><input type="text" id="csTeacher" placeholder="أ. فلان"></div>
+        <div class="admin-field"><label>القاعة</label><input type="text" id="csRoom" placeholder="قاعة 3"></div>
+        <div class="admin-field"><label>الفوج</label><select id="csGroup"><option value="">كل القسم</option>${(c.groups || []).map(g=> `<option>${escapeHtml(g)}</option>`).join('')}</select></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn gold" id="csAdd" type="button">+ إضافة حصة إلى الخانة</button>
+      <button class="btn" id="csRepeat" type="button">تكرار نفس الحصص في كل أيام هذا التوقيت</button></div>`;
+    box.querySelectorAll('[data-rm-sess]').forEach(b=> b.onclick = async ()=>{
+      arr.splice(+b.dataset.rmSess, 1);
+      if(!arr.length) delete c.cells[key]; else c.cells[key] = arr;
+      await saveTT(); renderTTGrid(); renderTTClasses();
+    });
+    document.getElementById('csAdd').onclick = async ()=>{
+      const subj = document.getElementById('csSubj').value.trim();
+      if(!subj){ alert('اكتب اسم المادة.'); return; }
+      c.cells = c.cells || {};
+      const list = c.cells[key] || [];
+      list.push({ subj, teacher: document.getElementById('csTeacher').value.trim(), room: document.getElementById('csRoom').value.trim(), group: document.getElementById('csGroup').value });
+      c.cells[key] = list;
+      await saveTT('تمت إضافة الحصة.'); renderTTGrid(); renderTTClasses();
+    };
+    document.getElementById('csRepeat').onclick = async ()=>{
+      if(!arr.length){ alert('أضف حصة أولاً.'); return; }
+      if(!confirm('نسخ حصص هذه الخانة إلى نفس التوقيت في بقية الأيام (يستبدل ما فيها)؟')) return;
+      siteTT.days.forEach(d=>{ c.cells[d + '|' + ttSelCell.slot] = JSON.parse(JSON.stringify(arr)); });
+      await saveTT('تم النسخ.'); renderTTGrid(); renderTTClasses();
+    };
+  }
+  document.getElementById('ttCopyBtn').addEventListener('click', async ()=>{
+    const c = curClass(), to = siteTT.classes.find(x=> x.id === document.getElementById('ttCopyTo').value);
+    if(!c || !to){ alert('اختر القسم المستهدف.'); return; }
+    if(!confirm('سيُستبدل جدول «' + to.name + '» بجدول «' + c.name + '». المتابعة؟')) return;
+    to.cells = JSON.parse(JSON.stringify(c.cells || {}));
+    to.groups = to.groups && to.groups.length ? to.groups : (c.groups || []);
+    await saveTT('تم نسخ الجدول.'); renderTTClasses();
+  });
+  document.getElementById('ttClearBtn').addEventListener('click', async ()=>{
+    const c = curClass(); if(!c || !confirm('مسح كل حصص «' + c.name + '»؟')) return;
+    c.cells = {}; ttSelCell = null;
+    await saveTT('تم المسح.'); renderTTGrid(); renderTTClasses();
+  });
+
+  // ---------- الوسائط ----------
+  function parseSocial(url){
+    url = String(url || '').trim(); let u;
+    try{ u = new URL(url); }catch(e){ return null; }
+    if(u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    const h = u.hostname.replace(/^(www|m|web)\./, '');
+    const okId = id => /^[\w-]{5,30}$/.test(id || '');
+    if(h === 'youtu.be' || h.endsWith('youtube.com') || h.endsWith('youtube-nocookie.com')){
+      let id = h === 'youtu.be' ? u.pathname.slice(1).split('/')[0] : (u.searchParams.get('v') || '');
+      if(!id){ const m = u.pathname.match(/\/(shorts|embed|live|v)\/([\w-]+)/); if(m) id = m[2]; }
+      return okId(id) ? { platform:'youtube', thumb:'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg' } : null;
+    }
+    if(h.endsWith('instagram.com')){ const m = u.pathname.match(/\/(p|reel|reels|tv)\/([\w-]+)/); return m && okId(m[2]) ? { platform:'instagram' } : null; }
+    if(h.endsWith('facebook.com') || h === 'fb.watch' || h.endsWith('fb.com')) return { platform:'facebook' };
+    return null;
+  }
+  const PLAT_AR = { youtube:'يوتيوب', instagram:'انستغرام', facebook:'فيسبوك' };
+  document.getElementById('mediaUrl').addEventListener('input', ()=>{
+    const v = document.getElementById('mediaUrl').value.trim(), box = document.getElementById('mediaDetect');
+    if(!v){ box.innerHTML = ''; return; }
+    const p = parseSocial(v);
+    box.innerHTML = p ? `<span class="pill-p">${PLAT_AR[p.platform]}</span>${p.thumb ? `<img src="${escapeHtml(p.thumb)}" alt="">` : ''}<span style="color:#2d8a4e;">رابط صالح ✓</span>` : '<span style="color:#a8402f;">رابط غير مدعوم — استعمل رابط فيديو/منشور من يوتيوب أو انستغرام أو فيسبوك.</span>';
+  });
+  function resetMediaForm(){
+    ['mediaEditId','mediaUrl','mediaTitle','mediaDate','mediaDesc'].forEach(i=> document.getElementById(i).value = '');
+    document.getElementById('mediaDetect').innerHTML = '';
+    document.getElementById('mediaFormTitle').textContent = 'إضافة فيديو / منشور';
+    document.getElementById('mediaCancelBtn').style.display = 'none';
+  }
+  document.getElementById('mediaCancelBtn').addEventListener('click', resetMediaForm);
+  document.getElementById('mediaSaveBtn').addEventListener('click', async ()=>{
+    const url = document.getElementById('mediaUrl').value.trim();
+    const p = parseSocial(url);
+    if(!p){ alert('الرابط غير مدعوم. استعمل رابطاً من يوتيوب أو انستغرام أو فيسبوك.'); return; }
+    const item = { id: document.getElementById('mediaEditId').value || genId(), url, platform: p.platform,
+      title: document.getElementById('mediaTitle').value.trim(), date: document.getElementById('mediaDate').value.trim(), desc: document.getElementById('mediaDesc').value.trim() };
+    const idx = siteMedia.findIndex(m=> m.id === item.id);
+    if(idx >= 0) siteMedia[idx] = item; else siteMedia.unshift(item);
+    const ok = await saveJSON('site-social', siteMedia);
+    if(!ok){ siteMedia = await loadJSON('site-social', []); renderAdminMedia(); return; }
+    toast('تم حفظ المنشور.'); resetMediaForm(); renderAdminMedia();
+  });
+  function renderAdminMedia(){
+    const wrap = document.getElementById('mediaAdminList');
+    if(!siteMedia.length){ wrap.innerHTML = '<p class="empty-note">لا توجد منشورات بعد</p>'; return; }
+    wrap.innerHTML = siteMedia.map((m, i)=> `<div class="admin-list-item">
+      <div class="admin-list-info"><div class="t">${escapeHtml(m.title || PLAT_AR[m.platform] || 'منشور')} <span class="pill-p">${PLAT_AR[m.platform] || ''}</span></div><div class="s" dir="ltr" style="text-align:right;">${escapeHtml(m.url)}</div></div>
+      <div class="admin-list-actions">
+        <button class="admin-mini-btn" data-m-up="${i}" type="button" title="أعلى">▲</button><button class="admin-mini-btn" data-m-down="${i}" type="button" title="أسفل">▼</button>
+        <button class="admin-mini-btn edit" data-m-edit="${m.id}" type="button" title="تعديل">✎</button><button class="admin-mini-btn danger" data-m-del="${m.id}" type="button" title="حذف">✕</button>
+      </div></div>`).join('');
+    const move = async (i, d)=>{ const j = i + d; if(j < 0 || j >= siteMedia.length) return; [siteMedia[i], siteMedia[j]] = [siteMedia[j], siteMedia[i]]; await saveJSON('site-social', siteMedia); renderAdminMedia(); };
+    wrap.querySelectorAll('[data-m-up]').forEach(b=> b.onclick = ()=> move(+b.dataset.mUp, -1));
+    wrap.querySelectorAll('[data-m-down]').forEach(b=> b.onclick = ()=> move(+b.dataset.mDown, 1));
+    wrap.querySelectorAll('[data-m-edit]').forEach(b=> b.onclick = ()=>{
+      const m = siteMedia.find(x=> x.id === b.dataset.mEdit); if(!m) return;
+      document.getElementById('mediaEditId').value = m.id; document.getElementById('mediaUrl').value = m.url;
+      document.getElementById('mediaTitle').value = m.title || ''; document.getElementById('mediaDate').value = m.date || ''; document.getElementById('mediaDesc').value = m.desc || '';
+      document.getElementById('mediaUrl').dispatchEvent(new Event('input'));
+      document.getElementById('mediaFormTitle').textContent = 'تعديل المنشور';
+      document.getElementById('mediaCancelBtn').style.display = 'inline-flex'; window.scrollTo({ top:0, behavior:'smooth' });
+    });
+    wrap.querySelectorAll('[data-m-del]').forEach(b=> b.onclick = async ()=>{
+      if(!confirm('حذف هذا المنشور؟')) return;
+      siteMedia = siteMedia.filter(x=> x.id !== b.dataset.mDel);
+      await saveJSON('site-social', siteMedia); renderAdminMedia();
+    });
+  }
+
+  // ---------- معلومات المتوسطة ----------
+  function fillInfoForm(){
+    const i = siteInfo || {};
+    document.getElementById('infoAbout').value = i.about || ''; document.getElementById('infoPhone').value = i.phone || '';
+    document.getElementById('infoEmail').value = i.email || ''; document.getElementById('infoAddress').value = i.address || '';
+    document.getElementById('infoHours').value = i.hours || ''; document.getElementById('infoMap').value = i.mapQuery || '';
+  }
+  document.getElementById('infoSaveBtn').addEventListener('click', async ()=>{
+    siteInfo = { about: document.getElementById('infoAbout').value.trim(), phone: document.getElementById('infoPhone').value.trim(),
+      email: document.getElementById('infoEmail').value.trim(), address: document.getElementById('infoAddress').value.trim(),
+      hours: document.getElementById('infoHours').value.trim(), mapQuery: document.getElementById('infoMap').value.trim() };
+    if(await saveJSON('site-info', siteInfo)) toast('تم حفظ معلومات المتوسطة.');
+  });
+  async function initV3Admin(){
+    siteTT = await loadJSON('site-timetable', {});
+    siteMedia = await loadJSON('site-social', []);
+    siteInfo = await loadJSON('site-info', {});
+    renderTTStruct(); renderTTClasses(); renderTTGrid(); renderAdminMedia(); fillInfoForm();
+  }
+
   async function initAdminData(){
     siteNews = await loadJSON('site-news', DEFAULT_NEWS);
     siteEvents = await loadJSON('site-events', DEFAULT_EVENTS);
     siteLevels = await loadJSON('site-levels', DEFAULT_LEVELS);
     siteQuestions = await loadQuestionsAdmin();
+    await initV3Admin();
   }
 
   // ================= تسجيل دخول المدير =================
@@ -1032,7 +1411,7 @@
     const theme = await grab(()=> loadJSON('site-theme', null));
     const backup = {
       exportedAt: new Date().toISOString(),
-      news: siteNews, events: siteEvents, levels: siteLevels, theme,
+      news: siteNews, events: siteEvents, levels: siteLevels, timetable: siteTT, social: siteMedia, info: siteInfo, theme,
       questions, questionReplies: replies, newsComments: comments, users, parentsChat: chat
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
