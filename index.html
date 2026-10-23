@@ -164,6 +164,14 @@
   .chk-row label{ white-space:nowrap; flex:none; }
   .slot-row .s-t{ direction:ltr; text-align:center; }
   .admin-list-actions .admin-mini-btn{ white-space:nowrap; width:auto; min-width:34px; padding:0 10px; }
+
+  @media (max-width:700px){
+    .admin-tabs{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:8px; margin-inline:-14px; padding-inline:14px; scrollbar-width:none; }
+    .admin-tabs::-webkit-scrollbar{ display:none; }
+    .admin-tab-btn{ flex-shrink:0; white-space:nowrap; }
+    .admin-list-item{ flex-wrap:wrap; }
+    .admin-card{ padding:16px; }
+  }
 </style>
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 </head>
@@ -196,6 +204,8 @@
         <button class="admin-tab-btn" data-tab="timetable">جدول الحصص</button>
         <button class="admin-tab-btn" data-tab="exams">الفروض والاختبارات</button>
         <button class="admin-tab-btn" data-tab="media">الوسائط (يوتيوب/انستغرام/فيسبوك)</button>
+        <button class="admin-tab-btn" data-tab="docs">الوثائق وقائمة المطعم</button>
+        <button class="admin-tab-btn" data-tab="moderation">الإشراف والبلاغات <span id="repBadge" style="color:#c0392b;font-weight:800;"></span></button>
         <button class="admin-tab-btn" data-tab="qa">فضاء الأسئلة</button>
         <button class="admin-tab-btn" data-tab="users">المستخدمون والإحصائيات</button>
         <button class="admin-tab-btn" data-tab="parentmsgs">دردشة الأولياء العامة</button>
@@ -209,6 +219,7 @@
           <button class="admin-tab-btn level-tab-btn" data-sub="events" type="button">المناسبات</button>
         </div>
         <div id="feedNewsPane">
+<div id="newsLegacyNotice" class="admin-card" style="display:none;background:#fff8e3;border-color:#c99a2e;font-size:.86rem;line-height:1.9;"></div>
         <div class="admin-card">
           <h4 id="newsFormTitle">إضافة خبر جديد</h4>
           <input type="hidden" id="newsEditId">
@@ -217,6 +228,7 @@
             <div class="admin-field"><label>التاريخ</label><input type="text" id="newsDate" placeholder="مثال: 28 أوت 2026"></div>
           </div>
           <div class="admin-field"><label>التصنيف</label><input type="text" id="newsCat" placeholder="مثال: نشاط ثقافي"></div>
+          <div class="admin-field"><label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" id="newsPinned" style="width:auto;"> تثبيت هذا الخبر في أعلى القائمة</label></div>
           <div class="admin-field"><label>نص مختصر (يظهر في قائمة الأخبار)</label><textarea id="newsExcerpt" placeholder="تفاصيل مختصرة عن الخبر..."></textarea></div>
           <div class="admin-field">
             <label>المحتوى الكامل (يظهر في صفحة الخبر — اختياري، وإلا يُستعمل النص المختصر)</label>
@@ -339,6 +351,47 @@
         <div id="mediaAdminList"></div>
       </div>
 
+      <!-- DOCS + MENU TAB -->
+      <div class="admin-panel-section" id="tabDocs">
+        <div class="admin-card">
+          <h4 id="docFormTitle">إضافة وثيقة أو استمارة</h4>
+          <p style="font-size:.8rem;color:#7c8b91;margin-bottom:10px;">ارفع الملف أولاً إلى Google Drive (مشاركة «أي شخص لديه الرابط») أو إلى مستودع GitHub، ثم الصق رابطه هنا.</p>
+          <input type="hidden" id="docEditId">
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>عنوان الوثيقة</label><input type="text" id="docTitle" placeholder="مثال: استمارة تسجيل التلاميذ"></div>
+            <div class="admin-field"><label>الفئة</label><input type="text" id="docCat" placeholder="استمارات / لوائح / قوائم الكتب..."></div>
+          </div>
+          <div class="admin-field"><label>الرابط</label><input type="url" id="docUrl" placeholder="https://..." dir="ltr"></div>
+          <div class="admin-field"><label>وصف قصير (اختياري)</label><input type="text" id="docDesc"></div>
+          <div style="display:flex;gap:10px;"><button class="btn gold" id="docSaveBtn" type="button">حفظ</button><button class="btn" id="docCancelBtn" type="button" style="display:none;background:#c7ced1;">إلغاء التعديل</button></div>
+        </div>
+        <div id="docsAdminList"></div>
+
+        <div class="admin-card" style="margin-top:24px;">
+          <h4>قائمة المطعم الأسبوعية (اتركها فارغة لإخفائها)</h4>
+          <div class="admin-field"><label>عنوان الأسبوع</label><input type="text" id="menuWeekInput" placeholder="من 25 إلى 29 أكتوبر"></div>
+          <div id="menuRowsEditor"></div>
+          <button class="btn gold" id="menuSaveBtn" type="button" style="margin-top:8px;">حفظ القائمة</button>
+        </div>
+      </div>
+
+      <!-- MODERATION TAB -->
+      <div class="admin-panel-section" id="tabModeration">
+        <div class="admin-card">
+          <h4>البلاغات الواردة <span id="repCount" class="pill-p" style="margin-inline-start:6px;"></span></h4>
+          <div id="reportsList"><p class="empty-note">جاري التحميل...</p></div>
+        </div>
+        <div class="admin-card">
+          <h4>الحسابات المحظورة من النشر</h4>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>معرّف المستخدم (UID)</label><input type="text" id="banUid" dir="ltr" placeholder="يظهر في البلاغ أو في قائمة المستخدمين"></div>
+            <div class="admin-field"><label>السبب (اختياري)</label><input type="text" id="banReason"></div>
+          </div>
+          <button class="btn" id="banAddBtn" type="button" style="background:#a8402f;">حظر</button>
+          <div id="bannedList" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
       <!-- QA TAB -->
       <div class="admin-panel-section" id="tabQa">
         <div id="qaAdminList"></div>
@@ -363,6 +416,13 @@
 
       <!-- SETTINGS / THEME TAB -->
       <div class="admin-panel-section" id="tabSettings">
+        <div class="admin-card" id="adminsCard" style="display:none;">
+          <h4>المشرفون الإضافيون (للمالك فقط)</h4>
+          <p style="font-size:.8rem;color:#7c8b91;margin-bottom:10px;">اكتب بريد كل مشرف في سطر. يجب أن يسجّل الدخول بحساب Google مؤكَّد البريد. لهم نفس صلاحياتك ما عدا إدارة هذه القائمة.</p>
+          <div class="admin-field"><textarea id="extraAdmins" dir="ltr" placeholder="assistant@gmail.com"></textarea></div>
+          <button class="btn gold" id="extraAdminsSave" type="button">حفظ المشرفين</button>
+        </div>
+
         <div class="admin-card">
           <h4>معلومات المتوسطة (صفحة «عن المتوسطة»)</h4>
           <div class="admin-field"><label>نبذة عن المتوسطة</label><textarea id="infoAbout" placeholder="اتركه فارغاً لاستعمال النص الافتراضي"></textarea></div>
@@ -373,6 +433,16 @@
           <div class="admin-field"><label>العنوان</label><input type="text" id="infoAddress" placeholder="الحي، المدينة"></div>
           <div class="admin-field"><label>أوقات العمل</label><textarea id="infoHours" placeholder="الأحد – الخميس: 08:00 – 16:00"></textarea></div>
           <div class="admin-field"><label>عبارة البحث على خريطة Google (لعرض الموقع)</label><input type="text" id="infoMap" placeholder="متوسطة شعيبي بومدين وهران"></div>
+          <div class="admin-field" style="margin-top:6px;"><label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" id="infoBannerOn" style="width:auto;"> تفعيل لافتة إعلان عاجل أعلى الموقع</label></div>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>نص اللافتة</label><input type="text" id="infoBannerText" placeholder="مثال: اجتماع الأولياء يوم الخميس 15:00"></div>
+            <div class="admin-field"><label>رابط «التفاصيل» (اختياري: https://… أو #news)</label><input type="text" id="infoBannerLink" dir="ltr"></div>
+          </div>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>رابط قناة واتساب/تيليغرام (اختياري)</label><input type="url" id="infoChannel" dir="ltr" placeholder="https://whatsapp.com/channel/..."></div>
+            <div class="admin-field"><label>نص زر القناة</label><input type="text" id="infoChannelLabel" placeholder="قناة المتوسطة على واتساب"></div>
+          </div>
+          <div class="admin-field"><label>كلمات محظورة في الأسئلة والتعليقات والدردشة (افصل بينها بفاصلة)</label><textarea id="infoBadWords" placeholder="تُمنع الرسالة التي تحتوي إحداها قبل إرسالها"></textarea></div>
           <button class="btn gold" id="infoSaveBtn" type="button">حفظ المعلومات</button>
         </div>
 
@@ -771,11 +841,15 @@
     document.getElementById('infoAbout').value = i.about || ''; document.getElementById('infoPhone').value = i.phone || '';
     document.getElementById('infoEmail').value = i.email || ''; document.getElementById('infoAddress').value = i.address || '';
     document.getElementById('infoHours').value = i.hours || ''; document.getElementById('infoMap').value = i.mapQuery || '';
+    document.getElementById('infoBannerOn').checked = !!i.bannerOn; document.getElementById('infoBannerText').value = i.bannerText || ''; document.getElementById('infoBannerLink').value = i.bannerLink || '';
+    document.getElementById('infoChannel').value = i.channelUrl || ''; document.getElementById('infoChannelLabel').value = i.channelLabel || ''; document.getElementById('infoBadWords').value = i.badWords || '';
   }
   document.getElementById('infoSaveBtn').addEventListener('click', async ()=>{
     siteInfo = { about: document.getElementById('infoAbout').value.trim(), phone: document.getElementById('infoPhone').value.trim(),
       email: document.getElementById('infoEmail').value.trim(), address: document.getElementById('infoAddress').value.trim(),
-      hours: document.getElementById('infoHours').value.trim(), mapQuery: document.getElementById('infoMap').value.trim() };
+      hours: document.getElementById('infoHours').value.trim(), mapQuery: document.getElementById('infoMap').value.trim(),
+      bannerOn: document.getElementById('infoBannerOn').checked, bannerText: document.getElementById('infoBannerText').value.trim(), bannerLink: document.getElementById('infoBannerLink').value.trim(),
+      channelUrl: document.getElementById('infoChannel').value.trim(), channelLabel: document.getElementById('infoChannelLabel').value.trim(), badWords: document.getElementById('infoBadWords').value.trim() };
     if(await saveJSON('site-info', siteInfo)) toast('تم حفظ معلومات المتوسطة.');
   });
   async function initV3Admin(){
@@ -785,12 +859,191 @@
     renderTTStruct(); renderTTClasses(); renderTTGrid(); renderAdminMedia(); fillInfoForm();
   }
 
+
+  // =====================================================================
+  //  الإصدار 4: أخبار منفصلة + وثائق + قائمة المطعم + إشراف + مشرفون
+  // =====================================================================
+  let currentIsOwner = false;
+  async function checkAdmin(user){
+    if(!user || !user.email) return false;
+    if(isAdminUser(user)){ currentIsOwner = true; return true; }
+    try{ await db.collection('config').doc('admins').get(); return true; }   // القراءة لا تنجح إلا لمشرف (حسب القواعد)
+    catch(e){ return false; }
+  }
+
+  // ----- الأخبار: نص كامل وصور في مستند مستقل + صورة مصغرة -----
+  let editingFull = null;
+  function makeThumb(dataUrl, w, q){
+    return new Promise(res=>{
+      if(!dataUrl){ res(null); return; }
+      const img = new Image();
+      img.onload = ()=>{
+        const s = Math.min(1, w / img.width), cw = Math.round(img.width * s), ch = Math.round(img.height * s);
+        const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+        const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cw, ch); x.drawImage(img, 0, 0, cw, ch);
+        res(c.toDataURL('image/jpeg', q));
+      };
+      img.onerror = ()=> res(null);
+      img.src = dataUrl;
+    });
+  }
+  async function migrateNews(){
+    const legacy = siteNews.filter(n=> !n.split);
+    if(!legacy.length) return;
+    if(!confirm('سيتم نقل نص وصور ' + legacy.length + ' خبر إلى النظام الجديد (أسرع وأخف). لن يضيع شيء. المتابعة؟')) return;
+    const out = []; let done = 0;
+    for(const n of siteNews){
+      if(n.split){ out.push(n); continue; }
+      const thumb = n.thumb || await makeThumb(n.image, 480, 0.6);
+      try{ await db.collection('newsFull').doc(n.id).set({ content: n.content || '', image: n.image || null, gallery: n.gallery || [] }); }
+      catch(e){ console.error(e); alert('تعذر ترحيل الخبر: ' + n.title + '\nتأكد من نشر قواعد Firestore الجديدة.'); out.push(n); continue; }
+      out.push({ id:n.id, date:n.date, title:n.title, excerpt:n.excerpt, cat:n.cat, ic:n.ic || 'newspaper', thumb: thumb || null, pinned: !!n.pinned, split:true });
+      done++;
+    }
+    siteNews = out;
+    if(!(await saveJSON('site-news', siteNews))){ siteNews = await loadJSON('site-news', DEFAULT_NEWS); }
+    else toast('تم ترحيل ' + done + ' خبر إلى النظام الجديد.');
+    renderAdminNewsList();
+  }
+  function updateLegacyNotice(){
+    const box = document.getElementById('newsLegacyNotice'); if(!box) return;
+    const legacy = siteNews.filter(n=> !n.split && (n.image || n.content || (n.gallery && n.gallery.length))).length;
+    const kb = Math.round(new Blob([JSON.stringify(siteNews)]).size / 1024);
+    if(!legacy){ box.style.display = kb > 600 ? '' : 'none'; box.innerHTML = kb > 600 ? `قائمة الأخبار كبيرة (${kb} ك.ب). فكّر في حذف الأخبار القديمة.` : ''; return; }
+    box.style.display = '';
+    box.innerHTML = `<b>تحسين الأداء:</b> يوجد ${legacy} خبر بالنظام القديم (صور ونصوص داخل مستند واحد حجمه الآن ${kb} ك.ب من أصل 1024). نقلها يجعل الموقع أخف وأسرع ويلغي حدّ عدد الأخبار.
+      <div style="margin-top:8px;"><button class="btn gold" id="migrateNewsBtn" type="button">ترحيل الأخبار القديمة الآن</button></div>`;
+    document.getElementById('migrateNewsBtn').onclick = migrateNews;
+  }
+
+  // ----- الوثائق + قائمة المطعم -----
+  let siteDocs = [], siteMenu = {};
+  function resetDocForm(){
+    ['docEditId','docTitle','docCat','docUrl','docDesc'].forEach(i=> document.getElementById(i).value = '');
+    document.getElementById('docFormTitle').textContent = 'إضافة وثيقة أو استمارة';
+    document.getElementById('docCancelBtn').style.display = 'none';
+  }
+  document.getElementById('docCancelBtn').addEventListener('click', resetDocForm);
+  document.getElementById('docSaveBtn').addEventListener('click', async ()=>{
+    const title = document.getElementById('docTitle').value.trim();
+    const url = document.getElementById('docUrl').value.trim();
+    if(!title || !/^https?:\/\/[^\s"'<>`]+$/i.test(url)){ alert('اكتب العنوان ورابطاً صحيحاً يبدأ بـ https://'); return; }
+    const item = { id: document.getElementById('docEditId').value || genId(), title, url, cat: document.getElementById('docCat').value.trim() || 'عام', desc: document.getElementById('docDesc').value.trim() };
+    const i = siteDocs.findIndex(d=> d.id === item.id);
+    if(i >= 0) siteDocs[i] = item; else siteDocs.unshift(item);
+    if(!(await saveJSON('site-docs', siteDocs))){ siteDocs = await loadJSON('site-docs', []); renderAdminDocs(); return; }
+    toast('تم حفظ الوثيقة.'); resetDocForm(); renderAdminDocs();
+  });
+  function renderAdminDocs(){
+    const wrap = document.getElementById('docsAdminList');
+    if(!siteDocs.length){ wrap.innerHTML = '<p class="empty-note">لا توجد وثائق بعد</p>'; return; }
+    wrap.innerHTML = siteDocs.map(d=> `<div class="admin-list-item"><div class="admin-list-info"><div class="t">${escapeHtml(d.title)} <span class="pill-p">${escapeHtml(d.cat || '')}</span></div><div class="s" dir="ltr" style="text-align:right;">${escapeHtml(d.url)}</div></div>
+      <div class="admin-list-actions"><button class="admin-mini-btn edit" data-d-edit="${d.id}" type="button">✎</button><button class="admin-mini-btn danger" data-d-del="${d.id}" type="button">✕</button></div></div>`).join('');
+    wrap.querySelectorAll('[data-d-edit]').forEach(b=> b.onclick = ()=>{
+      const d = siteDocs.find(x=> x.id === b.dataset.dEdit); if(!d) return;
+      document.getElementById('docEditId').value = d.id; document.getElementById('docTitle').value = d.title; document.getElementById('docCat').value = d.cat || '';
+      document.getElementById('docUrl').value = d.url; document.getElementById('docDesc').value = d.desc || '';
+      document.getElementById('docFormTitle').textContent = 'تعديل الوثيقة'; document.getElementById('docCancelBtn').style.display = 'inline-flex'; window.scrollTo({ top:0, behavior:'smooth' });
+    });
+    wrap.querySelectorAll('[data-d-del]').forEach(b=> b.onclick = async ()=>{
+      if(!confirm('حذف هذه الوثيقة؟')) return;
+      siteDocs = siteDocs.filter(x=> x.id !== b.dataset.dDel); await saveJSON('site-docs', siteDocs); renderAdminDocs();
+    });
+  }
+  function renderMenuEditor(){
+    const days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+    const cur = (siteMenu && siteMenu.rows) || [];
+    document.getElementById('menuWeekInput').value = (siteMenu && siteMenu.week) || '';
+    document.getElementById('menuRowsEditor').innerHTML = days.map(d=> {
+      const r = cur.find(x=> x.day === d) || {};
+      return `<div class="admin-grid-2" style="grid-template-columns:110px 1fr;margin-bottom:6px;"><input type="text" value="${d}" readonly style="background:#f3efe2;"><input type="text" class="menu-meal" data-day="${d}" value="${escapeHtml(r.meal || '')}" placeholder="وجبة ${d}"></div>`;
+    }).join('');
+  }
+  document.getElementById('menuSaveBtn').addEventListener('click', async ()=>{
+    const rows = [...document.querySelectorAll('.menu-meal')].map(i=> ({ day: i.dataset.day, meal: i.value.trim() })).filter(r=> r.meal);
+    siteMenu = { week: document.getElementById('menuWeekInput').value.trim(), rows };
+    if(await saveJSON('site-menu', siteMenu)) toast(rows.length ? 'تم حفظ قائمة المطعم.' : 'تم إخفاء قائمة المطعم.');
+  });
+
+  // ----- الإشراف: البلاغات والحظر -----
+  const REP_TYPES = { question:'سؤال', reply:'رد', comment:'تعليق', chat:'رسالة دردشة' };
+  const fmtTs = ts => { try{ return ts && ts.toDate ? ts.toDate().toLocaleString('ar-DZ', { dateStyle:'medium', timeStyle:'short' }) : ''; }catch(e){ return ''; } };
+  async function loadModeration(){
+    const box = document.getElementById('reportsList');
+    try{
+      const snap = await db.collection('reports').orderBy('createdAt', 'desc').limit(100).get();
+      const items = snap.docs.map(d=> Object.assign({ id: d.id }, d.data()));
+      document.getElementById('repCount').textContent = items.length || '';
+      const badge = document.getElementById('repBadge'); if(badge) badge.textContent = items.length ? '(' + items.length + ')' : '';
+      if(!items.length){ box.innerHTML = '<p class="empty-note">لا توجد بلاغات 🎉</p>'; }
+      else box.innerHTML = items.map(r=> `<div class="admin-list-item" style="align-items:flex-start;">
+        <div class="admin-list-info"><div class="t"><span class="pill-p">${REP_TYPES[r.type] || escapeHtml(r.type || '')}</span> ${escapeHtml(r.text || '')}</div>
+          <div class="s">الكاتب: ${escapeHtml(r.author || '—')} · أبلغ: ${escapeHtml(r.reporterName || '—')} · ${fmtTs(r.createdAt)}</div></div>
+        <div class="admin-list-actions" style="flex-wrap:wrap;">
+          <button class="btn" data-r-del="${r.id}" type="button" style="padding:6px 12px;font-size:.76rem;background:#a8402f;">حذف المحتوى</button>
+          <button class="btn" data-r-ban="${r.id}" type="button" style="padding:6px 12px;font-size:.76rem;background:#7a3b1f;">حظر الكاتب</button>
+          <button class="btn" data-r-ok="${r.id}" type="button" style="padding:6px 12px;font-size:.76rem;background:#5d7a86;">تجاهل</button>
+        </div></div>`).join('');
+      const byId = id => items.find(x=> x.id === id);
+      box.querySelectorAll('[data-r-ok]').forEach(b=> b.onclick = async ()=>{ await db.collection('reports').doc(b.dataset.rOk).delete(); toast('تم تجاهل البلاغ.'); loadModeration(); });
+      box.querySelectorAll('[data-r-del]').forEach(b=> b.onclick = async ()=>{
+        const r = byId(b.dataset.rDel); if(!r || !confirm('حذف المحتوى المُبلَّغ عنه نهائياً؟')) return;
+        try{ await db.doc(r.targetPath).delete(); }catch(e){ console.error(e); alert('تعذر حذف المحتوى (ربما حُذف مسبقاً).'); }
+        await db.collection('reports').doc(r.id).delete(); toast('تم حذف المحتوى.'); loadModeration();
+      });
+      box.querySelectorAll('[data-r-ban]').forEach(b=> b.onclick = async ()=>{
+        const r = byId(b.dataset.rBan); if(!r) return;
+        if(!r.authorUid){ alert('لا يتوفر معرّف الكاتب في هذا البلاغ.'); return; }
+        if(!confirm('حظر «' + (r.author || r.authorUid) + '» من النشر؟')) return;
+        await banUser(r.authorUid, r.author || '', (r.text || '').slice(0, 100)); toast('تم حظر الحساب.'); loadBanned();
+      });
+    }catch(e){ console.error(e); box.innerHTML = '<p class="empty-note">تعذر تحميل البلاغات — انشر قواعد Firestore الجديدة.</p>'; }
+    loadBanned();
+  }
+  async function banUser(uid, name, reason){
+    await db.collection('bannedUsers').doc(uid).set({ name: name || '', reason: reason || '', at: firebase.firestore.FieldValue.serverTimestamp() });
+  }
+  async function loadBanned(){
+    const box = document.getElementById('bannedList');
+    try{
+      const snap = await db.collection('bannedUsers').get();
+      if(snap.empty){ box.innerHTML = '<p class="empty-note">لا توجد حسابات محظورة</p>'; return; }
+      box.innerHTML = snap.docs.map(d=> { const v = d.data(); return `<div class="admin-list-item"><div class="admin-list-info"><div class="t">${escapeHtml(v.name || 'مستخدم')}</div><div class="s" dir="ltr" style="text-align:right;">${escapeHtml(d.id)} ${v.reason ? '· ' + escapeHtml(v.reason) : ''}</div></div>
+        <div class="admin-list-actions"><button class="btn" data-unban="${d.id}" type="button" style="padding:6px 14px;font-size:.78rem;">رفع الحظر</button></div></div>`; }).join('');
+      box.querySelectorAll('[data-unban]').forEach(b=> b.onclick = async ()=>{ await db.collection('bannedUsers').doc(b.dataset.unban).delete(); toast('تم رفع الحظر.'); loadBanned(); });
+    }catch(e){ console.error(e); box.innerHTML = ''; }
+  }
+  document.getElementById('banAddBtn').addEventListener('click', async ()=>{
+    const uid = document.getElementById('banUid').value.trim();
+    if(!uid){ alert('اكتب معرّف المستخدم (UID).'); return; }
+    await banUser(uid, '', document.getElementById('banReason').value.trim());
+    document.getElementById('banUid').value = ''; document.getElementById('banReason').value = ''; toast('تم الحظر.'); loadBanned();
+  });
+  document.querySelectorAll('#adminTabs .admin-tab-btn').forEach(b=> b.addEventListener('click', ()=>{ if(b.dataset.tab === 'moderation') loadModeration(); }));
+
+  // ----- المشرفون الإضافيون (للمالك) -----
+  document.getElementById('extraAdminsSave').addEventListener('click', async ()=>{
+    const emails = [...new Set(document.getElementById('extraAdmins').value.split(/[\s,،;]+/).map(e=> e.trim().toLowerCase()).filter(e=> /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)))];
+    try{ await db.collection('config').doc('admins').set({ emails }); toast('تم حفظ المشرفين (' + emails.length + ').'); }
+    catch(e){ console.error(e); alert('تعذر الحفظ — هذه الميزة للمالك فقط، وتتطلب نشر قواعد Firestore الجديدة.'); }
+  });
+  async function initV4Admin(){
+    siteDocs = await loadJSON('site-docs', []); siteMenu = await loadJSON('site-menu', {});
+    renderAdminDocs(); renderMenuEditor(); updateLegacyNotice();
+    if(currentIsOwner){
+      document.getElementById('adminsCard').style.display = '';
+      try{ const d = await db.collection('config').doc('admins').get(); document.getElementById('extraAdmins').value = d.exists ? (d.data().emails || []).join('\n') : ''; }catch(e){}
+    }
+    try{ const s = await db.collection('reports').limit(100).get(); const b = document.getElementById('repBadge'); if(b) b.textContent = s.size ? '(' + s.size + ')' : ''; }catch(e){}
+  }
+
   async function initAdminData(){
     siteNews = await loadJSON('site-news', DEFAULT_NEWS);
     siteEvents = await loadJSON('site-events', DEFAULT_EVENTS);
     siteLevels = await loadJSON('site-levels', DEFAULT_LEVELS);
     siteQuestions = await loadQuestionsAdmin();
     await initV3Admin();
+    await initV4Admin();
   }
 
   // ================= تسجيل دخول المدير =================
@@ -820,10 +1073,11 @@
   }
 
   if(auth){
-    auth.onAuthStateChanged((user)=>{
-      if(user && isAdminUser(user)){
+    auth.onAuthStateChanged(async (user)=>{
+      if(!user) return;
+      if(await checkAdmin(user)){
         showAdminShell();
-      } else if(user && !isAdminUser(user)){
+      } else {
         showAdminError('هذا الحساب (' + user.email + ') غير مخوّل بالدخول إلى لوحة التحكم.');
       }
     });
@@ -833,7 +1087,7 @@
     if(!auth){ showAdminError('تعذر الاتصال بخدمة تسجيل الدخول.'); return; }
     try{
       const result = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      if(!isAdminUser(result.user)){
+      if(!(await checkAdmin(result.user))){
         showAdminError('هذا الحساب (' + result.user.email + ') غير مخوّل بالدخول إلى لوحة التحكم.');
         await auth.signOut();
         return;
@@ -852,7 +1106,7 @@
     if(!auth){ showAdminError('تعذر الاتصال بخدمة تسجيل الدخول.'); return; }
     try{
       const cred = await auth.signInWithEmailAndPassword(email, pass);
-      if(!isAdminUser(cred.user)){
+      if(!(await checkAdmin(cred.user))){
         showAdminError('هذا الحساب غير مخوّل بالدخول إلى لوحة التحكم.');
         await auth.signOut();
         return;
@@ -958,6 +1212,7 @@
   });
 
   function resetNewsForm(){
+    editingFull = null; document.getElementById('newsPinned').checked = false;
     document.getElementById('newsEditId').value = '';
     document.getElementById('newsTitle').value = '';
     document.getElementById('newsDate').value = '';
@@ -981,18 +1236,18 @@
     const content = newsQuill.getText().trim() ? newsQuill.root.innerHTML : '';
     if(!title || !date || !excerpt){ alert('يرجى تعبئة العنوان والتاريخ والنص المختصر على الأقل'); return; }
     const editId = document.getElementById('newsEditId').value;
-
-    if(editId){
-      const item = siteNews.find(n=> n.id === editId);
-      if(item){
-        item.title = title; item.date = date; item.cat = cat; item.excerpt = excerpt;
-        item.content = content || '';
-        if(pendingNewsImage) item.image = pendingNewsImage;
-        if(pendingGallery.length) item.gallery = pendingGallery.slice();
-      }
-    } else {
-      siteNews.unshift({id:genId(), date, title, excerpt, content: content || '', cat, ic:'newspaper', image: pendingNewsImage, gallery: pendingGallery.slice()});
-    }
+    const old = editId ? siteNews.find(n=> n.id === editId) : null;
+    const id = editId || genId();
+    const prevImage = editingFull ? editingFull.image : (old && !old.split ? old.image : null);
+    const image = pendingNewsImage || prevImage || null;
+    const full = { content: content || '', image, gallery: pendingGallery.slice() };
+    if(JSON.stringify(full).length > 900000){ alert('حجم صور الخبر كبير جداً (الحد 1 ميغابايت). قلّل عدد الصور أو حجمها.'); return; }
+    const thumb = pendingNewsImage ? await makeThumb(pendingNewsImage, 480, 0.6) : ((old && old.thumb) || await makeThumb(image, 480, 0.6));
+    const light = { id, date, title, excerpt, cat, ic: (old && old.ic) || 'newspaper', thumb: thumb || null, pinned: document.getElementById('newsPinned').checked, split: true };
+    try{ await db.collection('newsFull').doc(id).set(full); }
+    catch(e){ console.error(e); alert('تعذر حفظ نص الخبر — تأكد من نشر قواعد Firestore الجديدة (newsFull).'); return; }
+    const idx = siteNews.findIndex(n=> n.id === id);
+    if(idx >= 0) siteNews[idx] = light; else siteNews.unshift(light);
     const okNews = await saveJSON('site-news', siteNews);
     if(!okNews){ siteNews = await loadJSON('site-news', DEFAULT_NEWS); renderAdminNewsList(); return; }
     renderAdminNewsList();
@@ -1001,14 +1256,15 @@
   });
 
   function renderAdminNewsList(){
+    updateLegacyNotice();
     const wrap = document.getElementById('newsAdminList');
     if(!siteNews.length){ wrap.innerHTML = '<p class="empty-note">لا توجد أخبار بعد</p>'; return; }
     wrap.innerHTML = siteNews.map(n=> `
       <div class="admin-list-item">
-        <div class="admin-list-thumb">${n.image ? `<img src="${safeImg(n.image)}">` : icon(n.ic || 'newspaper', 18)}</div>
+        <div class="admin-list-thumb">${(n.thumb || n.image) ? `<img src="${safeImg(n.thumb || n.image)}">` : icon(n.ic || 'newspaper', 18)}</div>
         <div class="admin-list-info">
           <div class="t">${escapeHtml(n.title)}</div>
-          <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}${n.gallery && n.gallery.length ? ' · ' + n.gallery.length + ' صور إضافية' : ''}</div>
+          <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}${n.pinned ? ' · 📌 مثبّت' : ''}${n.split ? '' : ' · نظام قديم'}${n.gallery && n.gallery.length ? ' · ' + n.gallery.length + ' صور إضافية' : ''}</div>
         </div>
         <div class="admin-list-actions">
           <button class="admin-mini-btn edit" data-edit-news="${n.id}" title="تعديل"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4z"/></svg></button>
@@ -1016,27 +1272,35 @@
         </div>
       </div>`).join('');
 
-    wrap.querySelectorAll('[data-edit-news]').forEach(b=> b.addEventListener('click', ()=>{
+    wrap.querySelectorAll('[data-edit-news]').forEach(b=> b.addEventListener('click', async ()=>{
       const item = siteNews.find(n=> n.id === b.dataset.editNews);
       if(!item) return;
+      let src = item; editingFull = null;
+      if(item.split){
+        try{ const d = await db.collection('newsFull').doc(item.id).get(); editingFull = d.exists ? d.data() : {}; }
+        catch(e){ console.error(e); alert('تعذر تحميل نص الخبر.'); return; }
+        src = Object.assign({}, item, editingFull);
+      }
+      document.getElementById('newsPinned').checked = !!item.pinned;
       document.getElementById('newsEditId').value = item.id;
       document.getElementById('newsTitle').value = item.title;
       document.getElementById('newsDate').value = item.date;
       document.getElementById('newsCat').value = item.cat;
       document.getElementById('newsExcerpt').value = item.excerpt;
-      newsQuill.setContents([]); newsQuill.clipboard.dangerouslyPasteHTML(0, item.content || '');
+      newsQuill.setContents([]); newsQuill.clipboard.dangerouslyPasteHTML(0, src.content || '');
       document.getElementById('newsFormTitle').textContent = 'تعديل الخبر';
       document.getElementById('newsCancelEdit').style.display = 'inline-flex';
       const prev = document.getElementById('newsImgPreview');
-      if(item.image){ prev.src = item.image; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
+      if(src.image){ prev.src = src.image; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
       pendingNewsImage = null;
-      pendingGallery = (item.gallery || []).slice();
+      pendingGallery = (src.gallery || []).slice();
       renderGalleryPreview();
       window.scrollTo({top:0, behavior:'smooth'});
     }));
     wrap.querySelectorAll('[data-del-news]').forEach(b=> b.addEventListener('click', async ()=>{
       if(!confirm('هل تريد حذف هذا الخبر؟')) return;
       siteNews = siteNews.filter(n=> n.id !== b.dataset.delNews);
+      db.collection('newsFull').doc(b.dataset.delNews).delete().catch(()=>{});
       await saveJSON('site-news', siteNews);
       renderAdminNewsList();
     }));
