@@ -237,6 +237,7 @@
         <button class="admin-tab-btn" data-tab="moderation">الإشراف والبلاغات <span id="repBadge" style="color:#c0392b;font-weight:800;"></span></button>
         <button class="admin-tab-btn" data-tab="polls">الاستطلاعات</button>
         <button class="admin-tab-btn" data-tab="suggestions">الاقتراحات والشكاوى <span id="sugBadge" style="color:#c0392b;font-weight:800;"></span></button>
+        <button class="admin-tab-btn" data-tab="qpending">مراجعة الأسئلة <span id="qpBadge" style="color:#c0392b;font-weight:800;"></span></button>
         <button class="admin-tab-btn" data-tab="qa">فضاء الأسئلة</button>
         <button class="admin-tab-btn" data-tab="users">المستخدمون والإحصائيات</button>
         <button class="admin-tab-btn" data-tab="parentmsgs">دردشة الأولياء العامة</button>
@@ -317,7 +318,7 @@
           <input type="hidden" id="newsEditId">
           <div class="admin-grid-2">
             <div class="admin-field"><label>عنوان الخبر</label><input type="text" id="newsTitle" placeholder="مثال: تكريم التلاميذ المتفوقين"></div>
-            <div class="admin-field"><label>التاريخ</label><input type="text" id="newsDate" placeholder="مثال: 28 أوت 2026"></div>
+            <div class="admin-field"><label>تاريخ النشر <small style="color:#7c8b91;">(اختر تاريخاً مستقبلياً لجدولة الخبر)</small></label><input type="date" id="newsDate"><div id="newsDateOld" data-old="" style="display:none;font-size:.76rem;color:#9a6b0f;margin-top:4px;"></div></div>
           </div>
           <div class="admin-field"><label>التصنيف</label><input type="text" id="newsCat" placeholder="مثال: نشاط ثقافي"></div>
           <div class="admin-field"><label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" id="newsPinned" style="width:auto;"> تثبيت هذا الخبر في أعلى القائمة</label></div>
@@ -441,6 +442,12 @@
           </div>
         </div>
         <div id="mediaAdminList"></div>
+        <div class="admin-card" style="margin-top:22px;">
+          <h4>المنشورات التلقائية <span id="feedCount" class="pill-p" style="margin-inline-start:6px;"></span></h4>
+          <p style="font-size:.82rem;color:#5d6d73;line-height:1.9;margin-bottom:10px;">تُضاف هنا تلقائياً كل ساعة آخر فيديوهات يوتيوب ومنشورات انستغرام وفيسبوك، وتظهر في الوسائط بعنوانها الأصلي، ويُعلَن عن الجديد منها بلافتة بارزة. إن لم تظهر منشورات فالمزامنة لم تُفعَّل بعد (راجع ملف <b>إعداد-المزامنة.md</b>). يمكنك إخفاء أي عنصر لا تريده.</p>
+          <div id="feedAdminList"><p class="empty-note">جاري التحميل...</p></div>
+        </div>
+
       </div>
 
       <!-- DOCS + MENU TAB -->
@@ -481,6 +488,15 @@
           </div>
           <button class="btn" id="banAddBtn" type="button" style="background:#a8402f;">حظر</button>
           <div id="bannedList" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <!-- QUESTIONS PENDING REVIEW TAB -->
+      <div class="admin-panel-section" id="tabQpending">
+        <div class="admin-card">
+          <h4>أسئلة بانتظار المراجعة <span id="qpCount" class="pill-p" style="margin-inline-start:6px;"></span></h4>
+          <p style="font-size:.8rem;color:#7c8b91;margin-bottom:10px;">تظهر هنا الأسئلة الجديدة عند تفعيل «مراجعة الأسئلة قبل النشر» من الإعدادات. الموافقة تنشر السؤال فوراً في فضاء الأسئلة.</p>
+          <div id="qpList"><p class="empty-note">جاري التحميل...</p></div>
         </div>
       </div>
 
@@ -535,6 +551,18 @@
             <div class="admin-field"><label>نص زر القناة</label><input type="text" id="infoChannelLabel" placeholder="قناة المتوسطة على واتساب"></div>
           </div>
           <div class="admin-field"><label>كلمات محظورة في الأسئلة والتعليقات والدردشة (افصل بينها بفاصلة)</label><textarea id="infoBadWords" placeholder="تُمنع الرسالة التي تحتوي إحداها قبل إرسالها"></textarea></div>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>رابط صفحة فيسبوك الرسمية</label><input type="url" id="infoFb" dir="ltr" placeholder="https://www.facebook.com/اسم-الصفحة"></div>
+            <div class="admin-field"><label>رابط حساب انستغرام</label><input type="url" id="infoIg" dir="ltr" placeholder="https://www.instagram.com/اسم-الحساب"></div>
+          </div>
+          <div class="admin-grid-2">
+            <div class="admin-field"><label>رابط قناة يوتيوب</label><input type="url" id="infoYt" dir="ltr" placeholder="https://www.youtube.com/@اسم-القناة"></div>
+            <div class="admin-field"><label>رابط الموقع الرسمي (اختياري)</label><input type="url" id="infoWeb" dir="ltr" placeholder="https://..."></div>
+          </div>
+          <p style="font-size:.76rem;color:#7c8b91;margin:-4px 0 12px;">هذه الروابط تظهر في أيقونات أعلى الموقع وفي التذييل. استعمل رابط الصفحة المباشر وليس رابط المشاركة المختصر.</p>
+          <div class="admin-field"><label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" id="infoAnnounce" style="width:auto;"> إعلان تلقائي بارز عند نشر فيديو أو منشور جديد في الوسائط</label></div>
+          <div class="admin-field"><label>مدة بقاء الإعلان (بالأيام)</label><input type="number" id="infoAnnounceDays" min="1" max="30" value="3" style="max-width:140px;"></div>
+          <div class="admin-field"><label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" id="infoQaPremod" style="width:auto;"> مراجعة الأسئلة قبل نشرها (تظهر بعد موافقتك)</label></div>
           <button class="btn gold" id="infoSaveBtn" type="button">حفظ المعلومات</button>
         </div>
 
@@ -900,6 +928,10 @@
     if(!p){ alert('الرابط غير مدعوم. استعمل رابطاً من يوتيوب أو انستغرام أو فيسبوك.'); return; }
     const item = { id: document.getElementById('mediaEditId').value || genId(), url, platform: p.platform,
       title: document.getElementById('mediaTitle').value.trim(), date: document.getElementById('mediaDate').value.trim(), desc: document.getElementById('mediaDesc').value.trim() };
+    const prevM = siteMedia.find(m=> m.id === item.id);
+    item.ts = (prevM && prevM.ts) || Date.now();
+    if(!item.title && p.platform === 'youtube') item.title = await fetchYtTitleA(url);
+    if(!item.date) item.date = fmtIsoAr(new Date(item.ts - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
     const idx = siteMedia.findIndex(m=> m.id === item.id);
     if(idx >= 0) siteMedia[idx] = item; else siteMedia.unshift(item);
     const ok = await saveJSON('site-social', siteMedia);
@@ -940,14 +972,18 @@
     document.getElementById('infoEmail').value = i.email || ''; document.getElementById('infoAddress').value = i.address || '';
     document.getElementById('infoHours').value = i.hours || ''; document.getElementById('infoMap').value = i.mapQuery || '';
     document.getElementById('infoBannerOn').checked = !!i.bannerOn; document.getElementById('infoBannerText').value = i.bannerText || ''; document.getElementById('infoBannerLink').value = i.bannerLink || '';
+    document.getElementById('infoFb').value = i.facebookUrl || ''; document.getElementById('infoIg').value = i.instagramUrl || ''; document.getElementById('infoYt').value = i.youtubeUrl || ''; document.getElementById('infoWeb').value = i.websiteUrl || '';
+    document.getElementById('infoAnnounce').checked = i.announceMedia !== false; document.getElementById('infoAnnounceDays').value = (i.announceDays !== undefined && i.announceDays !== '' && i.announceDays !== null) ? i.announceDays : 3; document.getElementById('infoQaPremod').checked = !!i.qaPremod;
     document.getElementById('infoChannel').value = i.channelUrl || ''; document.getElementById('infoChannelLabel').value = i.channelLabel || ''; document.getElementById('infoBadWords').value = i.badWords || '';
   }
   document.getElementById('infoSaveBtn').addEventListener('click', async ()=>{
-    siteInfo = { about: document.getElementById('infoAbout').value.trim(), phone: document.getElementById('infoPhone').value.trim(),
+    siteInfo = Object.assign({}, siteInfo, { about: document.getElementById('infoAbout').value.trim(), phone: document.getElementById('infoPhone').value.trim(),
       email: document.getElementById('infoEmail').value.trim(), address: document.getElementById('infoAddress').value.trim(),
       hours: document.getElementById('infoHours').value.trim(), mapQuery: document.getElementById('infoMap').value.trim(),
       bannerOn: document.getElementById('infoBannerOn').checked, bannerText: document.getElementById('infoBannerText').value.trim(), bannerLink: document.getElementById('infoBannerLink').value.trim(),
-      channelUrl: document.getElementById('infoChannel').value.trim(), channelLabel: document.getElementById('infoChannelLabel').value.trim(), badWords: document.getElementById('infoBadWords').value.trim() };
+      channelUrl: document.getElementById('infoChannel').value.trim(), channelLabel: document.getElementById('infoChannelLabel').value.trim(), badWords: document.getElementById('infoBadWords').value.trim(),
+      facebookUrl: document.getElementById('infoFb').value.trim(), instagramUrl: document.getElementById('infoIg').value.trim(), youtubeUrl: document.getElementById('infoYt').value.trim(), websiteUrl: document.getElementById('infoWeb').value.trim(),
+      announceMedia: document.getElementById('infoAnnounce').checked, announceDays: Math.max(1, Math.min(30, +document.getElementById('infoAnnounceDays').value || 3)), qaPremod: document.getElementById('infoQaPremod').checked });
     if(await saveJSON('site-info', siteInfo)) toast('تم حفظ معلومات المتوسطة.');
   });
   async function initV3Admin(){
@@ -979,7 +1015,7 @@
         const s = Math.min(1, w / img.width), cw = Math.round(img.width * s), ch = Math.round(img.height * s);
         const c = document.createElement('canvas'); c.width = cw; c.height = ch;
         const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cw, ch); x.drawImage(img, 0, 0, cw, ch);
-        res(c.toDataURL('image/jpeg', q));
+        let o = ''; try{ o = c.toDataURL('image/webp', q); }catch(e){} res(o.startsWith('data:image/webp') ? o : c.toDataURL('image/jpeg', q));
       };
       img.onerror = ()=> res(null);
       img.src = dataUrl;
@@ -1161,6 +1197,7 @@
       card('وثائق', (siteDocs || []).length, '#3d9f8f', 'docs'),
       '<div class="dash-card" style="--c:#c0392b" data-go="moderation"><b id="dcRep">…</b><span>بلاغات</span></div>',
       '<div class="dash-card" style="--c:#b2691f" data-go="suggestions"><b id="dcSug">…</b><span>اقتراحات وشكاوى</span></div>',
+      '<div class="dash-card" style="--c:#7a3b1f" data-go="qpending"><b id="dcQp">…</b><span>أسئلة بانتظار المراجعة</span></div>',
       '<div class="dash-card" style="--c:#4f6bd6" data-go="polls"><b id="dcPoll">…</b><span>استطلاعات نشطة</span></div>',
       '<div class="dash-card" style="--c:#0e3b4c" data-go="users"><b id="dcUsers">…</b><span>مستخدمون مسجلون</span><small>اضغط للتفاصيل</small></div>'
     ].join('');
@@ -1169,6 +1206,7 @@
     try{ put('dcRep', (await db.collection('reports').limit(100).get()).size); }catch(e){ put('dcRep', '—'); }
     try{ const s = await db.collection('suggestions').limit(100).get(); put('dcSug', s.size); updateSugBadge(s.size); }catch(e){ put('dcSug', '—'); }
     try{ const s = await db.collection('polls').where('active', '==', true).get(); put('dcPoll', s.size); }catch(e){ put('dcPoll', '—'); }
+    try{ put('dcQp', (await db.collection('questionsPending').limit(100).get()).size); }catch(e){ put('dcQp', '—'); }
     try{ put('dcUsers', (await db.collection('users').get()).size); }catch(e){ put('dcUsers', '—'); }
     // حجم البيانات
     const parts = [['قائمة الأخبار', 'site-news', siteNews, 1024], ['المناسبات', 'site-events', siteEvents, 1024], ['جدول الحصص', 'site-timetable', siteTT, 1024], ['الوسائط', 'site-social', siteMedia, 1024], ['الوثائق', 'site-docs', siteDocs, 1024]];
@@ -1355,6 +1393,99 @@
   });
   async function initV5Admin(){ renderDashboard(); }
 
+
+  // =====================================================================
+  //  الإصدار 6: توحيد التواريخ، عناوين الفيديو الأصلية، التغذية التلقائية، مراجعة الأسئلة
+  // =====================================================================
+  const AR_MONTHS_A = ['جانفي','فيفري','مارس','أفريل','ماي','جوان','جويلية','أوت','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const fmtIsoAr = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? (+m[3]) + ' ' + AR_MONTHS_A[+m[2] - 1] + ' ' + m[1] : ''; };
+  const todayIsoA = ()=> new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+  // ----- عنوان الفيديو الأصلي (يوتيوب) -----
+  let ytTitleTimer = null;
+  async function fetchYtTitleA(url){
+    try{
+      const r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(url));
+      if(!r.ok) return '';
+      return (await r.json()).title || '';
+    }catch(e){ return ''; }
+  }
+  document.getElementById('mediaUrl').addEventListener('input', ()=>{
+    clearTimeout(ytTitleTimer);
+    ytTitleTimer = setTimeout(async ()=>{
+      const url = document.getElementById('mediaUrl').value.trim(), p = parseSocial(url);
+      const box = document.getElementById('mediaDetect');
+      if(!p) return;
+      if(p.platform === 'youtube'){
+        const tEl = document.getElementById('mediaTitle');
+        if(!tEl.value.trim()){
+          box.insertAdjacentHTML('beforeend', '<span id="ytFetching" style="color:#7c8b91;">… جاري جلب العنوان الأصلي</span>');
+          const t = await fetchYtTitleA(url);
+          const f = document.getElementById('ytFetching'); if(f) f.remove();
+          if(t && !tEl.value.trim()){ tEl.value = t; box.insertAdjacentHTML('beforeend', '<span style="color:#2d8a4e;">✓ تم جلب العنوان الأصلي من يوتيوب</span>'); }
+        }
+      } else {
+        box.insertAdjacentHTML('beforeend', '<span style="color:#9a6b0f;font-size:.78rem;">لا يمكن جلب العنوان تلقائياً من ' + PLAT_AR[p.platform] + ': اكتبه بنفسك (أو انسخ أول سطر من المنشور).</span>');
+      }
+    }, 600);
+  });
+
+  // ----- التغذية التلقائية: إخفاء/إظهار -----
+  let feedItems = [];
+  async function loadFeedAdmin(){
+    const box = document.getElementById('feedAdminList'); if(!box) return;
+    try{
+      const r = await fetch('media-feed.json?v=' + Date.now(), { cache:'no-cache' });
+      if(!r.ok) throw new Error('missing');
+      feedItems = (await r.json()).items || [];
+    }catch(e){ feedItems = []; }
+    document.getElementById('feedCount').textContent = feedItems.length || '';
+    if(!feedItems.length){ box.innerHTML = '<p class="empty-note">لا توجد منشورات تلقائية بعد.</p>'; return; }
+    const hidden = new Set((siteInfo && siteInfo.hiddenFeed) || []);
+    box.innerHTML = feedItems.slice(0, 40).map(f=> `<div class="admin-list-item"><div class="admin-list-info"><div class="t">${escapeHtml(f.title || '(بدون عنوان)')} <span class="pill-p">${PLAT_AR[f.platform] || ''}</span>${hidden.has(f.id) ? '<span class="u-badge-ban" style="background:#7c8b91;">مخفي</span>' : ''}</div><div class="s" dir="ltr" style="text-align:right;">${escapeHtml(f.url)}${f.ts ? ' · ' + new Date(f.ts).toLocaleDateString('ar-DZ') : ''}</div></div>
+      <div class="admin-list-actions"><button class="btn" data-fhide="${escapeHtml(f.id)}" type="button" style="padding:6px 14px;font-size:.78rem;">${hidden.has(f.id) ? 'إظهار' : 'إخفاء'}</button></div></div>`).join('');
+    box.querySelectorAll('[data-fhide]').forEach(b=> b.onclick = async ()=>{
+      const set = new Set((siteInfo && siteInfo.hiddenFeed) || []);
+      if(set.has(b.dataset.fhide)) set.delete(b.dataset.fhide); else set.add(b.dataset.fhide);
+      siteInfo = Object.assign({}, siteInfo, { hiddenFeed: [...set] });
+      if(await saveJSON('site-info', siteInfo)){ toast('تم التحديث.'); loadFeedAdmin(); }
+    });
+  }
+
+  // ----- مراجعة الأسئلة قبل النشر -----
+  async function loadPending(){
+    const box = document.getElementById('qpList');
+    try{
+      const snap = await db.collection('questionsPending').orderBy('createdAt', 'desc').limit(100).get();
+      const items = snap.docs.map(d=> Object.assign({ id: d.id }, d.data()));
+      document.getElementById('qpCount').textContent = items.length || '';
+      const b = document.getElementById('qpBadge'); if(b) b.textContent = items.length ? '(' + items.length + ')' : '';
+      if(!items.length){ box.innerHTML = '<p class="empty-note">لا توجد أسئلة بانتظار المراجعة 🎉</p>'; return; }
+      box.innerHTML = items.map(q=> `<div class="admin-list-item" style="align-items:flex-start;"><div class="admin-list-info"><div class="t"><span class="pill-p">${escapeHtml(q.subj || '')}</span> ${escapeHtml(q.level || '')} <span style="color:#7c8b91;font-size:.8rem;">${escapeHtml(q.author || '')}</span></div>
+        <div style="margin:6px 0;line-height:1.9;white-space:pre-wrap;">${escapeHtml(q.body || '')}</div>${q.attachment ? `<img src="${safeImg(q.attachment)}" alt="" style="max-height:120px;border-radius:10px;">` : ''}<div class="s">${fmtTs(q.createdAt)}</div></div>
+        <div class="admin-list-actions"><button class="btn gold" data-qp-ok="${q.id}" type="button" style="padding:6px 14px;font-size:.78rem;">موافقة ونشر</button><button class="btn" data-qp-no="${q.id}" type="button" style="padding:6px 14px;font-size:.78rem;background:#a8402f;">رفض</button></div></div>`).join('');
+      box.querySelectorAll('[data-qp-ok]').forEach(btn=> btn.onclick = async ()=>{
+        const q = items.find(x=> x.id === btn.dataset.qpOk); if(!q) return;
+        const data = Object.assign({}, q); delete data.id;
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); data.likes = []; data.answerLikes = [];
+        try{ await db.collection('questions').add(data); await db.collection('questionsPending').doc(q.id).delete(); toast('تم نشر السؤال.'); loadPending(); }
+        catch(e){ console.error(e); alert('تعذر النشر — تأكد من نشر قواعد Firestore الجديدة.'); }
+      });
+      box.querySelectorAll('[data-qp-no]').forEach(btn=> btn.onclick = async ()=>{
+        if(!confirm('رفض هذا السؤال وحذفه؟')) return;
+        await db.collection('questionsPending').doc(btn.dataset.qpNo).delete(); toast('تم الرفض.'); loadPending();
+      });
+    }catch(e){ console.error(e); box.innerHTML = '<p class="empty-note">تعذر التحميل — انشر قواعد Firestore الجديدة.</p>'; }
+  }
+  document.querySelectorAll('#adminTabs .admin-tab-btn').forEach(b=> b.addEventListener('click', ()=>{
+    if(b.dataset.tab === 'qpending') loadPending();
+    if(b.dataset.tab === 'media') loadFeedAdmin();
+  }));
+  async function initV6Admin(){
+    loadFeedAdmin();
+    try{ const s = await db.collection('questionsPending').limit(100).get(); const b = document.getElementById('qpBadge'); if(b) b.textContent = s.size ? '(' + s.size + ')' : ''; }catch(e){}
+  }
+
   async function initAdminData(){
     siteNews = await loadJSON('site-news', DEFAULT_NEWS);
     siteEvents = await loadJSON('site-events', DEFAULT_EVENTS);
@@ -1363,6 +1494,7 @@
     await initV3Admin();
     await initV4Admin();
     await initV5Admin();
+    await initV6Admin();
   }
 
   // ================= تسجيل دخول المدير =================
@@ -1469,7 +1601,7 @@
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', quality));
+          let o = ''; try{ o = canvas.toDataURL('image/webp', quality); }catch(e){} resolve(o.startsWith('data:image/webp') ? o : canvas.toDataURL('image/jpeg', quality));
         };
         img.onerror = reject;
         img.src = e.target.result;
@@ -1534,7 +1666,7 @@
     editingFull = null; document.getElementById('newsPinned').checked = false;
     document.getElementById('newsEditId').value = '';
     document.getElementById('newsTitle').value = '';
-    document.getElementById('newsDate').value = '';
+    document.getElementById('newsDate').value = ''; document.getElementById('newsDateOld').dataset.old = ''; document.getElementById('newsDateOld').style.display = 'none';
     document.getElementById('newsCat').value = '';
     document.getElementById('newsExcerpt').value = '';
     newsQuill.setContents([]);
@@ -1549,7 +1681,8 @@
 
   document.getElementById('newsSaveBtn').addEventListener('click', async ()=>{
     const title = document.getElementById('newsTitle').value.trim();
-    const date = document.getElementById('newsDate').value.trim();
+    const iso = document.getElementById('newsDate').value || '';
+    const date = iso ? fmtIsoAr(iso) : (document.getElementById('newsDateOld').dataset.old || '');
     const cat = document.getElementById('newsCat').value.trim() || 'إعلان';
     const excerpt = document.getElementById('newsExcerpt').value.trim();
     const content = newsQuill.getText().trim() ? newsQuill.root.innerHTML : '';
@@ -1562,7 +1695,7 @@
     const full = { content: content || '', image, gallery: pendingGallery.slice() };
     if(JSON.stringify(full).length > 900000){ alert('حجم صور الخبر كبير جداً (الحد 1 ميغابايت). قلّل عدد الصور أو حجمها.'); return; }
     const thumb = pendingNewsImage ? await makeThumb(pendingNewsImage, 480, 0.6) : ((old && old.thumb) || await makeThumb(image, 480, 0.6));
-    const light = { id, date, title, excerpt, cat, ic: (old && old.ic) || 'newspaper', thumb: thumb || null, pinned: document.getElementById('newsPinned').checked, split: true };
+    const light = { id, date, iso: iso || null, title, excerpt, cat, ic: (old && old.ic) || 'newspaper', thumb: thumb || null, pinned: document.getElementById('newsPinned').checked, split: true };
     try{ await db.collection('newsFull').doc(id).set(full); }
     catch(e){ console.error(e); alert('تعذر حفظ نص الخبر — تأكد من نشر قواعد Firestore الجديدة (newsFull).'); return; }
     const idx = siteNews.findIndex(n=> n.id === id);
@@ -1583,7 +1716,7 @@
         <div class="admin-list-thumb">${(n.thumb || n.image) ? `<img src="${safeImg(n.thumb || n.image)}">` : icon(n.ic || 'newspaper', 18)}</div>
         <div class="admin-list-info">
           <div class="t">${escapeHtml(n.title)}</div>
-          <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}${n.pinned ? ' · 📌 مثبّت' : ''}${n.split ? '' : ' · نظام قديم'}${n.gallery && n.gallery.length ? ' · ' + n.gallery.length + ' صور إضافية' : ''}</div>
+          <div class="s">${escapeHtml(n.date)} · ${escapeHtml(n.cat)}${n.pinned ? ' · 📌 مثبّت' : ''}${n.iso && n.iso > todayIsoA() ? ' · ⏳ مجدول للنشر' : ''}${n.split ? '' : ' · نظام قديم'}${n.gallery && n.gallery.length ? ' · ' + n.gallery.length + ' صور إضافية' : ''}</div>
         </div>
         <div class="admin-list-actions">
           <button class="admin-mini-btn edit" data-edit-news="${n.id}" title="تعديل"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4z"/></svg></button>
@@ -1603,7 +1736,8 @@
       document.getElementById('newsPinned').checked = !!item.pinned;
       document.getElementById('newsEditId').value = item.id;
       document.getElementById('newsTitle').value = item.title;
-      document.getElementById('newsDate').value = item.date;
+      document.getElementById('newsDate').value = item.iso || '';
+      { const od = document.getElementById('newsDateOld'); od.dataset.old = item.iso ? '' : (item.date || ''); od.style.display = item.iso ? 'none' : 'block'; od.textContent = item.iso ? '' : 'التاريخ المسجّل سابقاً: ' + (item.date || '') + ' — اختر تاريخاً جديداً لتوحيد الصيغة'; }
       document.getElementById('newsCat').value = item.cat;
       document.getElementById('newsExcerpt').value = item.excerpt;
       newsQuill.setContents([]); newsQuill.clipboard.dangerouslyPasteHTML(0, src.content || '');
